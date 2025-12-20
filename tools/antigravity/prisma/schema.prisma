@@ -28,6 +28,7 @@ model Quote {
   explanation String?
   category    String?  // The "Tag" or "Topic"
   tags        String?  // Comma separated
+  concepts    String?  // JSON string of { word: definition }
   
   generatedAt DateTime @default(now())
   sourceModel String? // "gpt-4o", "mock"

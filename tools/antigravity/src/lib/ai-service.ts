@@ -60,7 +60,14 @@ export async function getDailyQuote(userId: string) {
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
 
             const prompt = `Generiere ein einzigartiges, inspirierendes Zitat für einen Nutzer mit Interesse an: ${prefs.interests || "allgemeiner Weisheit"}. 
-      Antworte im JSON Format: { "content": "Zitat auf Deutsch", "author": "Name", "explanation": "Maximal 2 Sätze Erklärung auf Deutsch", "category": "Ein Wort (Kategorie)" }`;
+            
+            Regeln für die Ausgabe (JSON):
+            - "content": Das Zitat auf Deutsch.
+            - "author": Name des Autors. Wenn unbekannt oder generell, gib null zurück.
+            - "explanation": Prägnante 2-3 Sätze Erklärung auf Deutsch.
+            - "category": Ein Wort (Kategorie).
+            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" } für 1-3 schwierige oder wichtige Begriffe im Kontext (z.B. "Dichotomie der Kontrolle", "Achtsamkeit"). Wenn keine passenden Begriffe da sind, leeres Array.
+            `;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
@@ -88,13 +95,13 @@ export async function getDailyQuote(userId: string) {
     }
 
     // 3. Save to DB
-    // Create Quote if not exists (deduplication logic skipped for simplicity, just create new for now)
     const quote = await prisma.quote.create({
         data: {
             content: quoteData.content,
             author: quoteData.author,
             explanation: quoteData.explanation,
             category: quoteData.category,
+            concepts: quoteData.concepts ? JSON.stringify(quoteData.concepts) : null,
             sourceModel: openai ? "gpt-4o-mini" : "mock"
         }
     });

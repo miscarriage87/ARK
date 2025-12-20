@@ -61,13 +61,30 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
                         "{quote.content}"
                     </h2>
 
-                    <p className={styles.quoteAuthor}>
-                        — {quote.author || "Unbekannt"}
-                    </p>
+                    {quote.author && quote.author !== "Unbekannt" && quote.author !== "Unknown" && (
+                        <p className={styles.quoteAuthor}>
+                            — {quote.author}
+                        </p>
+                    )}
 
                     {quote.explanation && (
                         <div className={styles.explanation}>
                             {quote.explanation}
+                        </div>
+                    )}
+
+                    {quote.concepts && (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'left', width: '100%', fontSize: '0.75rem' }}>
+                            {(() => {
+                                try {
+                                    const concepts = JSON.parse(quote.concepts);
+                                    return concepts.map((c: any, i: number) => (
+                                        <div key={i} style={{ marginBottom: '0.5rem' }}>
+                                            <strong style={{ color: 'hsl(var(--primary))' }}>{c.word}:</strong> <span style={{ opacity: 0.8 }}>{c.definition}</span>
+                                        </div>
+                                    ));
+                                } catch (e) { return null; }
+                            })()}
                         </div>
                     )}
                 </div>
