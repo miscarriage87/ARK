@@ -1,11 +1,18 @@
 .main {
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
-  padding: 2rem 1rem;
+  /* Fallback */
+  height: 100dvh;
+  /* Dynamic viewport height */
+  margin: 0;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  /* Prevent scroll */
 }
 
 .mainStart {
