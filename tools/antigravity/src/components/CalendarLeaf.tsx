@@ -54,21 +54,23 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
 
             {/* The Quote (Underneath) */}
             <div className={styles.quoteCard}>
-                <Quote className={styles.icon} />
+                <div className={styles.quoteContent}>
+                    <Quote className={styles.icon} />
 
-                <h2 className={styles.quoteText}>
-                    "{quote.content}"
-                </h2>
+                    <h2 className={styles.quoteText}>
+                        "{quote.content}"
+                    </h2>
 
-                <p className={styles.quoteAuthor}>
-                    — {quote.author || "Unbekannt"}
-                </p>
+                    <p className={styles.quoteAuthor}>
+                        — {quote.author || "Unbekannt"}
+                    </p>
 
-                {quote.explanation && (
-                    <div className={styles.explanation}>
-                        {quote.explanation}
-                    </div>
-                )}
+                    {quote.explanation && (
+                        <div className={styles.explanation}>
+                            {quote.explanation}
+                        </div>
+                    )}
+                </div>
 
                 <div className={styles.actions}>
                     <button onClick={handleRate} className={styles.actionBtn}><Heart size={18} /></button>

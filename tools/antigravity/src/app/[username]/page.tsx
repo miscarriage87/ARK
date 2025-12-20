@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
 import CalendarLeaf from "@/components/CalendarLeaf";
 import Onboarding from "@/components/Onboarding";
+import UserHeader from "@/components/UserHeader";
 import styles from "../page.module.css";
 import { Metadata } from "next";
 
@@ -49,13 +50,7 @@ export default async function UserPage({ params }: Props) {
 
     return (
         <main className={`${styles.main} ${styles.mainStart}`}>
-            <div className={styles.headerBar}>
-                <div className={styles.logoSmall}>ARK</div>
-                <div className={styles.profileContainer}>
-                    <div className={styles.statusDot}></div>
-                    <div className={styles.profileName}>{user.name}</div>
-                </div>
-            </div>
+            <UserHeader user={user} />
 
             <CalendarLeaf quote={quote} dateStr={now} userId={user.id} />
         </main>
