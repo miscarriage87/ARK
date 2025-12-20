@@ -1,14 +1,39 @@
-# Multi-Agent Workflow Rules
+# Multi-Tool Workflow Rules
 
-> **Universelle Regeln für alle Tools/Agenten im ARK Repository**
+> **Universelle Regeln für alle Tools im ARK Repository**
+
+---
+
+## 🔧 **Variablen-Definition**
+
+Diese Datei verwendet Variablen, die vom Architekten angepasst werden können:
+
+```yaml
+# Verfügbare Tools (erweitere nach Bedarf)
+AVAILABLE_TOOLS:
+  - antigravity
+  - chatgpt  
+  - kiro
+  - code-agent
+  # Neue Tools hier hinzufügen
+
+# Branch-Patterns
+MASTER_BRANCH_PATTERN: "tool/{TOOL_NAME}"
+FEATURE_BRANCH_PATTERN: "tool/{TOOL_NAME}/{TOPIC}"
+
+# Repository-Struktur
+TOOL_WORKSPACE: "/tools/{TOOL_NAME}/"
+MAIN_BRANCH: "main"
+```
 
 ---
 
 ## 🎯 **Deine Tool-Identität**
 
-**Du bist**: `{TOOL_NAME}` *(ersetze mit: antigravity, chatgpt, kiro, oder code-agent)*  
+**Du bist**: `{TOOL_NAME}` *(wähle: antigravity, chatgpt, kiro, code-agent)*  
 **Dein Arbeitsbereich**: `/tools/{TOOL_NAME}/`  
-**Dein Branch-Pattern**: `tool/{TOOL_NAME}/{TOPIC}`
+**Dein Master-Branch**: `tool/{TOOL_NAME}`  
+**Deine Feature-Branches**: `tool/{TOOL_NAME}/{TOPIC}`
 
 ---
 
@@ -16,13 +41,17 @@
 
 ### 1️⃣ **Branch-Isolation**
 ```bash
-# Arbeite NUR in diesem Branch-Pattern:
+# Master-Branch für dein Tool:
+tool/{TOOL_NAME}
+
+# Feature-Branches für spezifische Aufgaben:
 tool/{TOOL_NAME}/{TOPIC}
 
 # Beispiele:
-tool/kiro/setup-frontend
-tool/chatgpt/content-generation
-tool/antigravity/api-development
+tool/kiro                    # KIRO Master-Branch
+tool/kiro/setup-frontend     # KIRO Feature-Branch
+tool/chatgpt                 # ChatGPT Master-Branch
+tool/chatgpt/ai-integration  # ChatGPT Feature-Branch
 ```
 
 ### 2️⃣ **Pfad-Isolation** 
@@ -35,21 +64,51 @@ tool/antigravity/api-development
 /.github/
 /README.md
 /agents.md
+/00 ARCHIVE/
 ```
 
 ### 3️⃣ **Merge-Isolation**
 ```bash
 # Erstelle IMMER Pull Request nach main
 # NIEMALS direkter Push nach main
+git push origin tool/{TOOL_NAME}
 git push origin tool/{TOOL_NAME}/{TOPIC}
 # → Dann PR via GitHub UI
 ```
 
 ---
 
+## 🌳 **Branch-Strategie**
+
+### **Master-Branch pro Tool**
+Jedes Tool hat einen dauerhaften Master-Branch:
+```bash
+tool/antigravity    # Antigravity Hauptentwicklung
+tool/chatgpt        # ChatGPT Hauptentwicklung  
+tool/kiro           # KIRO Hauptentwicklung
+tool/code-agent     # Code-Agent Hauptentwicklung
+```
+
+### **Feature-Branches**
+Für spezifische Aufgaben oder Experimente:
+```bash
+tool/{TOOL_NAME}/setup
+tool/{TOOL_NAME}/frontend
+tool/{TOOL_NAME}/backend
+tool/{TOOL_NAME}/ai-integration
+tool/{TOOL_NAME}/deployment
+```
+
+### **Branch-Lifecycle**
+1. **Master-Branch**: Dauerhaft, enthält stabile Version
+2. **Feature-Branch**: Temporär, für spezifische Features
+3. **Merge**: Feature → Master → PR nach `main`
+
+---
+
 ## 🔄 **Dein Standard-Workflow**
 
-### **Schritt 1: Vorbereitung**
+### **Schritt 1: Repository Setup**
 ```bash
 # Repository klonen (falls noch nicht geschehen)
 git clone https://github.com/miscarriage87/ARK.git
@@ -61,30 +120,39 @@ git checkout main
 git pull origin main
 ```
 
-### **Schritt 2: Branch erstellen**
+### **Schritt 2: Master-Branch erstellen/nutzen**
 ```bash
-# Neuen Branch erstellen
-git checkout -b tool/{TOOL_NAME}/{TOPIC}
+# Prüfen ob Master-Branch existiert
+git checkout tool/{TOOL_NAME} 2>/dev/null || git checkout -b tool/{TOOL_NAME}
 
-# Beispiel für KIRO:
-git checkout -b tool/kiro/setup-webpack
+# Falls Branch existiert, aktualisieren
+git pull origin tool/{TOOL_NAME}
 ```
 
-### **Schritt 3: Arbeiten**
+### **Schritt 3: Feature-Branch (optional)**
+```bash
+# Für spezifische Features
+git checkout -b tool/{TOOL_NAME}/{TOPIC}
+
+# Beispiele:
+git checkout -b tool/kiro/setup-webpack
+git checkout -b tool/chatgpt/content-generation
+```
+
+### **Schritt 4: Entwicklung**
 ```bash
 # Wechsle in deinen Ordner
 cd tools/{TOOL_NAME}/
 
-# Arbeite nur hier - erstelle/bearbeite Dateien
-# Beispiel-Struktur:
-tools/{TOOL_NAME}/
-├── README.md
-├── src/
-├── config/
-└── docs/
+# Implementiere die KOMPLETTE ARK-Anwendung:
+# - Frontend (UI/UX, Components)
+# - Backend (API, Datenbank)  
+# - KI-Integration (Content-Generierung)
+# - Mobile Features (PWA, Notifications)
+# - Deployment (CI/CD, Hosting)
 ```
 
-### **Schritt 4: Committen**
+### **Schritt 5: Committen**
 ```bash
 # Änderungen hinzufügen
 git add tools/{TOOL_NAME}/
@@ -93,19 +161,20 @@ git add tools/{TOOL_NAME}/
 git commit -m "tool({TOOL_NAME}): {KURZE_BESCHREIBUNG}"
 
 # Beispiele:
-git commit -m "tool(kiro): setup webpack configuration"
-git commit -m "tool(chatgpt): add content generation templates"
+git commit -m "tool(kiro): implement complete ARK frontend"
+git commit -m "tool(chatgpt): add AI content generation system"
 ```
 
-### **Schritt 5: Push & PR**
+### **Schritt 6: Push & PR**
 ```bash
 # Branch pushen
+git push origin tool/{TOOL_NAME}
+# oder
 git push origin tool/{TOOL_NAME}/{TOPIC}
 
-# Dann via GitHub UI:
+# PR erstellen via GitHub UI:
 # https://github.com/miscarriage87/ARK/pulls
-# → "New Pull Request"
-# → Base: main ← Compare: tool/{TOOL_NAME}/{TOPIC}
+# → Base: main ← Compare: tool/{TOOL_NAME}
 ```
 
 ---
@@ -114,19 +183,30 @@ git push origin tool/{TOOL_NAME}/{TOPIC}
 
 ```markdown
 ## Tool: {TOOL_NAME}
-**Branch**: `tool/{TOOL_NAME}/{TOPIC}`
+**Branch**: `tool/{TOOL_NAME}` oder `tool/{TOOL_NAME}/{TOPIC}`
+
+## Implementation Status
+- [ ] Frontend (UI/UX)
+- [ ] Backend (API/DB)
+- [ ] KI-Integration
+- [ ] Mobile Features
+- [ ] Deployment
 
 ## Was wurde geändert?
-- [Kurze Beschreibung der Änderungen]
+- [Beschreibung der Implementierung]
 
-## Geänderte Dateien
-- `tools/{TOOL_NAME}/...`
+## Tech-Stack
+- **Frontend**: [React/Vue/Vanilla/etc.]
+- **Backend**: [Node.js/Python/etc.]
+- **Database**: [PostgreSQL/MongoDB/etc.]
+- **KI**: [OpenAI/Anthropic/etc.]
 
-## Wie testen?
-- [Schritte zum Testen]
+## Demo/Testing
+- **URL**: [falls deployed]
+- **Lokaler Start**: [Anweisungen]
 
 ## Nächste Schritte
-- [Was sollte als nächstes gemacht werden]
+- [Was fehlt noch / geplante Verbesserungen]
 ```
 
 ---
@@ -140,34 +220,29 @@ git push origin tool/{TOOL_NAME}/{TOPIC}
 - Änderungen an Repository-Konfiguration (außer explizit beauftragt)
 
 ### ✅ **ERLAUBT**
-- Alles in `/tools/{TOOL_NAME}/`
-- Mehrere kleine PRs statt einem großen
-- Eigene Dokumentation im Tool-Ordner
-- Koordination mit anderen Tools via Issues/Discussions
+- Komplette App-Implementation in `/tools/{TOOL_NAME}/`
+- Eigener Tech-Stack und Architektur-Entscheidungen
+- Mehrere Branches pro Tool (Master + Features)
+- Eigene Dokumentation und Deployment-Strategien
 
 ---
 
-## 🛠️ **Tool-spezifische Rollen**
+## 🛠️ **Tool-Aufgaben**
 
-### **Antigravity** (`/tools/antigravity/`)
-- Backend-Entwicklung & API-Design
-- Datenbank-Schema & Server-Logik
-- Authentication & Security
+**Jedes Tool implementiert die KOMPLETTE ARK-Anwendung:**
 
-### **ChatGPT** (`/tools/chatgpt/`)
-- Content-Generierung & NLP
-- Spruch-Kategorisierung & Templates
-- Personalisierungs-Algorithmen
+### **Alle Tools** (`/tools/{TOOL_NAME}/`)
+- ✅ **Frontend**: Benutzeroberfläche, Komponenten, Styling
+- ✅ **Backend**: API, Datenbank, Server-Logik
+- ✅ **KI-Integration**: Content-Generierung, Personalisierung
+- ✅ **Mobile**: PWA, Notifications, Offline-Funktionalität
+- ✅ **Deployment**: CI/CD, Hosting, Monitoring
 
-### **KIRO** (`/tools/kiro/`)
-- Frontend-Entwicklung & UI/UX
-- Build-System & Development-Tools
-- Progressive Web App Features
-
-### **Code-Agent** (`/tools/code-agent/`)
-- Integration & Deployment
-- Testing & Quality Assurance
-- CI/CD & Automation
+### **Unterschiedliche Ansätze erwünscht:**
+- **Antigravity**: Innovative Architekturen, experimentelle Technologien
+- **ChatGPT**: KI-first Ansatz, intelligente Content-Strategien
+- **KIRO**: Benutzerfreundlichkeit, perfekte UX/UI
+- **Code-Agent**: Robuste Integration, professionelle Deployment-Pipelines
 
 ---
 
@@ -176,7 +251,7 @@ git push origin tool/{TOOL_NAME}/{TOPIC}
 Das Repository hat eine **Path-Policy CI**, die automatisch prüft:
 
 ```yaml
-# Wenn dein Branch: tool/kiro/feature
+# Wenn dein Branch: tool/kiro/* 
 # Dann dürfen nur Dateien in: tools/kiro/
 # geändert werden.
 
@@ -188,11 +263,27 @@ Das Repository hat eine **Path-Policy CI**, die automatisch prüft:
 
 ## 🚀 **Schnellstart für {TOOL_NAME}**
 
-1. **Klone Repository**: `git clone https://github.com/miscarriage87/ARK.git`
-2. **Erstelle Branch**: `git checkout -b tool/{TOOL_NAME}/initial-setup`
-3. **Arbeite in**: `/tools/{TOOL_NAME}/`
-4. **Committe**: `git commit -m "tool({TOOL_NAME}): initial setup"`
-5. **Push & PR**: `git push origin tool/{TOOL_NAME}/initial-setup`
+```bash
+# 1. Repository klonen
+git clone https://github.com/miscarriage87/ARK.git
+cd ARK
+
+# 2. Master-Branch erstellen/nutzen
+git checkout tool/{TOOL_NAME} 2>/dev/null || git checkout -b tool/{TOOL_NAME}
+
+# 3. In deinen Ordner wechseln
+cd tools/{TOOL_NAME}/
+
+# 4. Komplette ARK-App implementieren
+# [Deine Implementation hier]
+
+# 5. Committen und pushen
+git add .
+git commit -m "tool({TOOL_NAME}): implement complete ARK application"
+git push origin tool/{TOOL_NAME}
+
+# 6. PR erstellen via GitHub UI
+```
 
 ---
 
@@ -213,6 +304,12 @@ Das Repository hat eine **Path-Policy CI**, die automatisch prüft:
 ### **CI schlägt fehl mit "Path Policy Violation"**
 → Du hast Dateien außerhalb von `/tools/{TOOL_NAME}/` geändert
 
+### **Master-Branch existiert nicht**
+```bash
+git checkout -b tool/{TOOL_NAME}
+git push origin tool/{TOOL_NAME}
+```
+
 ### **Merge-Konflikt**
 ```bash
 git fetch origin
@@ -223,26 +320,47 @@ git push --force-with-lease
 
 ### **Branch existiert schon**
 ```bash
-git branch -D tool/{TOOL_NAME}/{TOPIC}
-git push origin --delete tool/{TOOL_NAME}/{TOPIC}
+git checkout tool/{TOOL_NAME}
+git pull origin tool/{TOOL_NAME}
 ```
 
 ---
 
 ## ✅ **Definition of Done**
 
-Eine Aufgabe ist abgeschlossen, wenn:
-- [ ] PR erstellt und gemerged
-- [ ] Alle Änderungen in `/tools/{TOOL_NAME}/`
-- [ ] CI-Checks sind grün
-- [ ] Minimale Dokumentation im Tool-Ordner vorhanden
+Eine Tool-Implementation ist abgeschlossen, wenn:
+- [ ] **Komplette Funktionalität**: Alle ARK-Features implementiert
+- [ ] **Lauffähig**: Anwendung kann gestartet und genutzt werden
+- [ ] **Dokumentiert**: README mit Setup- und Start-Anweisungen
+- [ ] **Deployed**: (Optional) Live-Demo verfügbar
+- [ ] **PR erstellt**: Merge-Request nach `main` eingereicht
+- [ ] **CI grün**: Alle automatischen Checks bestanden
+
+---
+
+## 🔧 **Für Architekten: Variablen erweitern**
+
+```yaml
+# Neue Tools hinzufügen:
+AVAILABLE_TOOLS:
+  - antigravity
+  - chatgpt
+  - kiro  
+  - code-agent
+  - neues-tool        # Hier hinzufügen
+
+# Neue Branch-Patterns:
+CUSTOM_PATTERNS:
+  - "tool/{TOOL_NAME}/experimental/{FEATURE}"
+  - "tool/{TOOL_NAME}/release/{VERSION}"
+```
 
 ---
 
 <div align="center">
 
-**Bereit? Dann leg los mit deinem ersten Branch!** 🚀
+**Bereit? Implementiere die komplette ARK-App in deinem Stil!** 🚀
 
-`git checkout -b tool/{TOOL_NAME}/getting-started`
+`git checkout tool/{TOOL_NAME}`
 
 </div>

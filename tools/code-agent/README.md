@@ -1,29 +1,41 @@
-# Code-Agent Tool
+# Code-Agent - Komplette ARK Implementation
 
-**Integration & Deployment für ARK**
+**Vollständige Abreißkalender-Anwendung im Code-Agent-Stil**
 
-## 🎯 Deine Rolle
-- Integration verschiedener Tool-Outputs
-- Testing & Quality Assurance
-- CI/CD & Deployment-Automation
-- Performance-Optimierung
+## 🎯 Deine Mission
+Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Code-Agent-Ansatz:
+
+- ✅ **Frontend**: Robuste UI mit professioneller Architektur
+- ✅ **Backend**: Enterprise-grade Server-Systeme & APIs
+- ✅ **KI-Integration**: Zuverlässige Content-Generierung & ML-Pipelines
+- ✅ **Mobile**: Production-ready PWA mit Advanced Features
+- ✅ **Deployment**: Professionelle CI/CD, Monitoring & DevOps
 
 ## 📁 Dein Arbeitsbereich
 ```
 tools/code-agent/
 ├── README.md          # Diese Datei
-├── integration/      # Tool-Integration
-├── testing/          # Test Suites & QA
-├── deployment/       # CI/CD Scripts
-├── performance/      # Optimization
-└── scripts/          # Automation Scripts
+├── frontend/          # UI/UX Implementation
+├── backend/           # Server & API
+├── ai/                # KI-Integration
+├── mobile/            # PWA Features
+├── deployment/        # CI/CD & Hosting
+└── docs/              # Dokumentation
 ```
 
 ## 🔄 Workflow
-1. **Branch**: `tool/code-agent/<topic>`
-2. **Arbeiten**: Nur in `/tools/code-agent/`
-3. **Commit**: `tool(code-agent): <beschreibung>`
-4. **PR**: Nach `main`
+1. **Master-Branch**: `tool/code-agent`
+2. **Feature-Branches**: `tool/code-agent/{feature}`
+3. **Arbeiten**: Nur in `/tools/code-agent/`
+4. **Commit**: `tool(code-agent): <beschreibung>`
+5. **PR**: Nach `main`
+
+## 🚀 Schnellstart
+```bash
+git checkout tool/code-agent 2>/dev/null || git checkout -b tool/code-agent
+cd tools/code-agent/
+# Implementiere komplette ARK-App hier
+```
 
 ## 📋 Regeln
 Siehe [`agents.md`](../../agents.md) für vollständige Regeln.
