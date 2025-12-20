@@ -68,26 +68,43 @@ export async function getDailyQuote(userId: string) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
 
-            const prompt = `Handele als Kurator für tiefe Weisheit.
-            Der Nutzer interessiert sich für: ${prefs.interests || "Philosophie & Leben"}.
+            // Randomly select mode: Quote (60%), Question (30%), Pulse (10%)
+            const modes = ["QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUESTION", "QUESTION", "QUESTION", "PULSE"];
+            const mode = modes[Math.floor(Math.random() * modes.length)];
+
+            const prompt = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau), der den Nutzer aufwecken und berühren will.
+            Das heutige Format ist: ${mode}.
             
-            1. Wähle EINES dieser Interessen (oder ein verwandtes Thema) und finde/generiere ein tiefgründiges, inspirierendes Zitat (deutsch).
-            2. Sei kreativ! Vermeide Klischees.
-            3. ANALYSIERE das Zitat anschließend auf schwierig zu verstehende Begriffe:
-               - Suche nach Fremdwörtern, Fachbegriffen, archaischer Sprache oder philosophischen Konzepten.
-               - Identifiziere 1-3 solcher Begriffe, die IM TEXT vorkommen.
-               - Erkläre KEINE einfachen Wörter (wie "Leben", "Zeit", "Glück"), es sei denn, sie werden in einem sehr spezifischen, komplexen Kontext verwendet.
-               - Wenn das Zitat nur einfache Sprache verwendet, lass das "concepts"-Array leer. ERZWINGE KEINE BEGRIFFE.
-            
+            Der Nutzer interessiert sich für: ${prefs.interests || "Leben, Liebe, Erfolg"}.
+            Wähle ein Thema davon.
+
+            ANWEISUNGEN FÜR ${mode}:
+            ${mode === "QUOTE" ? `
+            - Suche ein tiefgründiges Zitat (deutsch).
+            - Autor kann bekannt sein oder 'Unbekannt'.
+            ` : mode === "QUESTION" ? `
+            - Formuliere eine RADIKALE, direkte Frage an den Nutzer ("Du"-Form).
+            - Beispiel: "Wofür bist du heute unendlich dankbar?" oder "Was würdest du tun, wenn du keine Angst hättest?"
+            - "author" Feld soll "Reflexion" sein.
+            ` : `
+            - Formuliere einen kurzen, kraftvollen Impuls oder Mantra ("Du"-Form).
+            - Beispiel: "Atme tief ein. Das Leben ist jetzt."
+            - "author" Feld soll "Impuls" sein.
+            `}
+
+            ANALYSE (für alle Formate):
+            - Analysiere den Text auf schwierige/spannende Begriffe (Fremdwörter, Konzepte).
+            - Identifiziere 1-3 Begriff, die IM TEXT vorkommen.
+            - Falls der Text einfach ist, lass "concepts" leer.
+
             Output JSON:
             {
-              "content": "Zitat...",
-              "author": "Autor Name (oder null)",
-              "explanation": "Prägnante Deutung (2-3 Sätze).",
-              "category": "Ein Wort",
+              "content": "Text des Zitats/Frage/Impuls",
+              "author": "Name oder 'Reflexion'/'Impuls'",
+              "explanation": "Kurze Deutung oder Coaching-Hinweis dazu (2-3 Sätze).",
+              "category": "Kategorie (Ein Wort)",
               "concepts": [ { "word": "Begriff", "definition": "Erklärung" } ] 
             }
-            WICHTIG: "word" muss exakt (Case-Insensitive) im Zitat vorkommen.
             `;
 
             const completion = await openai.chat.completions.create({
