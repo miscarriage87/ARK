@@ -58,8 +58,10 @@ export async function getDailyQuote(userId: string) {
 
     // 2. Generate or Fetch new quote
     let quoteData: any;
+    console.log(`[QuoteService] Generating for User: ${userId}`);
 
     if (openai) {
+        console.log("[QuoteService] OpenAI Client Active. Attempting generation...");
         try {
             // Get User Preferences
             const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -102,9 +104,11 @@ export async function getDailyQuote(userId: string) {
 
     // Fallback if no OpenAI or error
     if (!quoteData) {
-        console.log("Using Mock Data");
+        console.warn("[QuoteService] FALLBACK TO MOCK DATA (No OpenAI result)");
         const randomIndex = Math.floor(Math.random() * MOCK_QUOTES.length);
         quoteData = MOCK_QUOTES[randomIndex];
+    } else {
+        console.log("[QuoteService] OpenAI Success. Content:", quoteData.content.substring(0, 20) + "...");
     }
 
     // 3. Save to DB
