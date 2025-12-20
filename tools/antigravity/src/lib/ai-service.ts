@@ -68,25 +68,32 @@ export async function getDailyQuote(userId: string) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
 
-            const prompt = `Generiere ein einzigartiges, inspirierendes Zitat für einen Nutzer mit den Interessen: ${prefs.interests || "allgemeine Weisheit"}.
+            const prompt = `Handele als Kurator für tiefe Weisheit.
+            Der Nutzer interessiert sich für: ${prefs.interests || "Philosophie & Leben"}.
             
-            WICHTIGE ANWEISUNGEN:
-            1. Wähle NUR EINES der Interessen aus oder generiere etwas Allgemeines. Versuche NICHT, alle Interessen zu kombinieren.
-            2. Sei SUTIL: Das Zitat soll nicht erzwungen wirken.
-            3. "concepts": Wähle NUR komplexe, philosophische oder fachspezifische Begriffe (z.B. "Stoizismus", "Entropie", "Amor Fati"). Erkläre KEINE alltäglichen Wörter wie "Leben", "Wissenschaft" oder "Glück". Wenn keine wirklich schwierigen Begriffe vorkommen, lass das Array leer.
+            1. Wähle EINES dieser Interessen (oder ein verwandtes Thema) und finde/generiere ein tiefgründiges, inspirierendes Zitat (deutsch).
+            2. Sei kreativ! Vermeide Klischees.
+            3. ANALYSIERE das Zitat anschließend auf schwierig zu verstehende Begriffe:
+               - Suche nach Fremdwörtern, Fachbegriffen, archaischer Sprache oder philosophischen Konzepten.
+               - Identifiziere 1-3 solcher Begriffe, die IM TEXT vorkommen.
+               - Erkläre KEINE einfachen Wörter (wie "Leben", "Zeit", "Glück"), es sei denn, sie werden in einem sehr spezifischen, komplexen Kontext verwendet.
+               - Wenn das Zitat nur einfache Sprache verwendet, lass das "concepts"-Array leer. ERZWINGE KEINE BEGRIFFE.
             
-            Regeln für die Ausgabe (JSON):
-            - "content": Das Zitat auf Deutsch.
-            - "author": Name des Autors. Wenn unbekannt oder generell, gib null zurück.
-            - "explanation": Prägnante 2-3 Sätze Erklärung auf Deutsch.
-            - "category": Ein Wort (Kategorie).
-            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" }. WICHTIG: Der "word" Wert MUSS EXAKT so im "content" oder der "explanation" vorkommen (gleiche Schreibweise).
+            Output JSON:
+            {
+              "content": "Zitat...",
+              "author": "Autor Name (oder null)",
+              "explanation": "Prägnante Deutung (2-3 Sätze).",
+              "category": "Ein Wort",
+              "concepts": [ { "word": "Begriff", "definition": "Erklärung" } ] 
+            }
+            WICHTIG: "word" muss exakt (Case-Insensitive) im Zitat vorkommen.
             `;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "Du bist ein weiser, tiefsinniger Mentor. Du bevorzugst Tiefe vor Breite." },
+                    { role: "system", content: "Du bist ein intellektueller Mentor. Du schätzt präzise Sprache und Vielfalt." },
                     { role: "user", content: prompt }
                 ],
                 response_format: { type: "json_object" },
