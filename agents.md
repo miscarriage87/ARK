@@ -238,11 +238,7 @@ git push origin tool/{TOOL_NAME}/{TOPIC}
 - ✅ **Mobile**: PWA, Notifications, Offline-Funktionalität
 - ✅ **Deployment**: CI/CD, Hosting, Monitoring
 
-### **Unterschiedliche Ansätze erwünscht:**
-- **Antigravity**: Innovative Architekturen, experimentelle Technologien
-- **ChatGPT**: KI-first Ansatz, intelligente Content-Strategien
-- **KIRO**: Benutzerfreundlichkeit, perfekte UX/UI
-- **Code-Agent**: Robuste Integration, professionelle Deployment-Pipelines
+**Jedes Tool wählt seinen eigenen Ansatz und Tech-Stack frei.**
 
 ---
 

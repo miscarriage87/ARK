@@ -1,15 +1,15 @@
 # ChatGPT - Komplette ARK Implementation
 
-**Vollständige Abreißkalender-Anwendung im ChatGPT-Stil**
+**Vollständige Abreißkalender-Anwendung**
 
 ## 🎯 Deine Mission
-Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen ChatGPT-Ansatz:
+Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Ansatz:
 
-- ✅ **Frontend**: KI-optimierte UI mit intelligenten Interaktionen
-- ✅ **Backend**: Content-first Server-Architektur & APIs
-- ✅ **KI-Integration**: Advanced Content-Generierung & NLP
-- ✅ **Mobile**: Intelligente PWA mit personalisierten Features
-- ✅ **Deployment**: Content-Management & CI/CD Strategien
+- ✅ **Frontend**: UI/UX Implementation
+- ✅ **Backend**: Server-Architektur & APIs
+- ✅ **KI-Integration**: Content-Generierung & Personalisierung
+- ✅ **Mobile**: Progressive Web App Features
+- ✅ **Deployment**: CI/CD & Hosting-Strategien
 
 ## 📁 Dein Arbeitsbereich
 ```

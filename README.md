@@ -49,10 +49,10 @@ ARK wird mit einem innovativen Multi-Tool-Ansatz entwickelt, bei dem **jedes Too
 
 ```
 ├── tools/
-│   ├── antigravity/     # Vollständige ARK-Implementation (Antigravity-Stil)
-│   ├── chatgpt/         # Vollständige ARK-Implementation (ChatGPT-Stil)  
-│   ├── kiro/            # Vollständige ARK-Implementation (KIRO-Stil)
-│   └── code-agent/      # Vollständige ARK-Implementation (Code-Agent-Stil)
+│   ├── antigravity/     # Vollständige ARK-Implementation
+│   ├── chatgpt/         # Vollständige ARK-Implementation
+│   ├── kiro/            # Vollständige ARK-Implementation
+│   └── code-agent/      # Vollständige ARK-Implementation
 ```
 
 **Jedes Tool entwickelt:**
@@ -109,19 +109,32 @@ Alle Entwicklungsregeln und Workflows sind in [`agents.md`](agents.md) definiert
 
 ---
 
-## 🎯 **Zielgruppen**
+## 🎯 **Personalisierungs-System**
 
-### 🧘 **Spirituell Interessierte**
-*Veit Lindau-inspirierte Inhalte, Achtsamkeit, persönliche Entwicklung*
+### 📊 **Dynamisches Nutzer-Profiling**
+ARK erstellt automatisch personalisierte Profile durch:
 
-### 🥋 **Aktive Senioren**
-*Kampfsport-Weisheiten, Disziplin, Lebenserfahrung*
+**Initiales Setup** (Minimal-Aufwand):
+- Kurzer Fragenkatalog (5-7 Fragen) zur Grundcharakterisierung
+- Schnelle Einschätzung von Interessen und Präferenzen
+- Optionale demografische Angaben
 
-### 📚 **Bildungsbegeisterte**
-*Sprachen, Geografie, Wissen, lebenslanges Lernen*
+**Kontinuierliche Anpassung** (Automatisch):
+- Tägliches Feedback: "Gefällt dir der heutige Spruch?" 
+  - 👍 **Gefällt mir** / 😐 **Neutral** / 👎 **Gefällt mir nicht**
+- Automatische Profil-Anpassung basierend auf Bewertungen
+- Lernende Algorithmen für bessere Personalisierung
+- Keine aufwendigen Fragebögen oder komplexe Einstellungen
 
-### 🌿 **Gesundheitsbewusste**
-*Wellness, Heilung, Balance, natürliche Lebensweise*
+**Profil-Kategorien** (Beispiele):
+- **Spiritualität & Achtsamkeit**: Meditation, persönliche Entwicklung
+- **Sport & Disziplin**: Motivation, Durchhaltevermögen, Kampfgeist
+- **Bildung & Wissen**: Sprachen, Geschichte, Wissenschaft
+- **Gesundheit & Wellness**: Balance, Heilung, natürliche Lebensweise
+- **Humor & Leichtigkeit**: Aufmunterung, positive Energie
+- **Philosophie & Weisheit**: Tiefere Gedanken, Lebenserfahrung
+
+Das System lernt kontinuierlich und passt die Spruch-Auswahl automatisch an die sich entwickelnden Präferenzen an.
 
 ---
 
@@ -142,24 +155,9 @@ cd ARK
 
 ---
 
-## 📈 **Roadmap**
-
-- [ ] **Phase 1**: Jedes Tool implementiert MVP (Minimum Viable Product)
-- [ ] **Phase 2**: Feature-Vergleich und Best-Practice-Extraktion
-- [ ] **Phase 3**: Optimierung und Performance-Tests
-- [ ] **Phase 4**: User-Testing mit verschiedenen Implementierungen
-- [ ] **Phase 5**: Finale Version oder Multi-Version-Deployment
-
----
-
 ## 🤝 **Beitragen**
 
-ARK lebt von der Vielfalt verschiedener Implementierungsansätze. Jedes Tool bringt seine einzigartige Perspektive ein:
-
-- **Antigravity** → Innovative Backend-Architekturen
-- **ChatGPT** → KI-first Content-Strategien
-- **KIRO** → Benutzerfreundliche Frontend-Erfahrungen
-- **Code-Agent** → Robuste Integration und Deployment
+ARK lebt von der Vielfalt verschiedener Implementierungsansätze. Jedes Tool bringt seine einzigartige Perspektive und Herangehensweise ein.
 
 Siehe [`agents.md`](agents.md) für detaillierte Entwicklungsregeln.
 

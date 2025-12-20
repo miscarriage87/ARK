@@ -1,15 +1,15 @@
 # Code-Agent - Komplette ARK Implementation
 
-**Vollständige Abreißkalender-Anwendung im Code-Agent-Stil**
+**Vollständige Abreißkalender-Anwendung**
 
 ## 🎯 Deine Mission
-Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Code-Agent-Ansatz:
+Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Ansatz:
 
-- ✅ **Frontend**: Robuste UI mit professioneller Architektur
-- ✅ **Backend**: Enterprise-grade Server-Systeme & APIs
-- ✅ **KI-Integration**: Zuverlässige Content-Generierung & ML-Pipelines
-- ✅ **Mobile**: Production-ready PWA mit Advanced Features
-- ✅ **Deployment**: Professionelle CI/CD, Monitoring & DevOps
+- ✅ **Frontend**: UI/UX Implementation
+- ✅ **Backend**: Server-Architektur & APIs
+- ✅ **KI-Integration**: Content-Generierung & Personalisierung
+- ✅ **Mobile**: Progressive Web App Features
+- ✅ **Deployment**: CI/CD & Hosting-Strategien
 
 ## 📁 Dein Arbeitsbereich
 ```

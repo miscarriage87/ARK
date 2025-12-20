@@ -1,15 +1,15 @@
 # KIRO - Komplette ARK Implementation
 
-**Vollständige Abreißkalender-Anwendung im KIRO-Stil**
+**Vollständige Abreißkalender-Anwendung**
 
 ## 🎯 Deine Mission
-Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen KIRO-Ansatz:
+Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Ansatz:
 
-- ✅ **Frontend**: Perfekte UX/UI mit modernsten Design-Patterns
-- ✅ **Backend**: Benutzerfreundliche Server-Architektur & APIs
-- ✅ **KI-Integration**: Nahtlose Content-Generierung & Personalisierung
-- ✅ **Mobile**: Erstklassige PWA mit optimaler User Experience
-- ✅ **Deployment**: Professionelle CI/CD & Hosting-Strategien
+- ✅ **Frontend**: UI/UX Implementation
+- ✅ **Backend**: Server-Architektur & APIs
+- ✅ **KI-Integration**: Content-Generierung & Personalisierung
+- ✅ **Mobile**: Progressive Web App Features
+- ✅ **Deployment**: CI/CD & Hosting-Strategien
 
 ## 📁 Dein Arbeitsbereich
 ```
