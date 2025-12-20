@@ -13,26 +13,38 @@ jobs:
         fetch-depth: 0
 
     - name: Check Path Policy
+      shell: bash
       run: |
-        # Get the source branch name
+        set -euo pipefail
+        
         SOURCE_BRANCH="${{ github.head_ref }}"
         echo "Source branch: $SOURCE_BRANCH"
         
         # Extract tool name from branch (tool/<agent_name>/...)
-        if [[ $SOURCE_BRANCH =~ ^tool/([^/]+)/ ]]; then
+        if [[ "$SOURCE_BRANCH" =~ ^tool/([^/]+)/.+$ ]]; then
           TOOL_NAME="${BASH_REMATCH[1]}"
           echo "Tool name: $TOOL_NAME"
           
-          # Get changed files
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+          
+          # Get changed files (PR-accurate)
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)"
+          if [[ -z "$CHANGED_FILES" ]]; then
+            echo "No changed files detected. Passing."
+            exit 0
+          fi
+          
           echo "Changed files:"
           echo "$CHANGED_FILES"
           
-          # Check if all changed files are in the correct tool directory
           INVALID_FILES=""
           while IFS= read -r file; do
-            if [[ ! "$file" =~ ^tools/$TOOL_NAME/ ]]; then
-              INVALID_FILES="$INVALID_FILES\n$file"
+            [[ -z "$file" ]] && continue
+            if [[ ! "$file" =~ ^tools/"$TOOL_NAME"/ ]]; then
+              INVALID_FILES+=$'\n'"$file"
             fi
           done <<< "$CHANGED_FILES"
           
@@ -46,5 +58,5 @@ jobs:
             echo "All changes are within the allowed directory: tools/$TOOL_NAME/"
           fi
         else
-          echo "ℹ️  Branch does not follow tool/<agent_name>/ pattern. Skipping path policy check."
+          echo "ℹ️  Branch does not follow tool/<agent_name>/<topic> pattern. Skipping path policy check."
         fi
