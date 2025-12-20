@@ -1,0 +1,50 @@
+name: Path Policy Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  path-policy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check Path Policy
+      run: |
+        # Get the source branch name
+        SOURCE_BRANCH="${{ github.head_ref }}"
+        echo "Source branch: $SOURCE_BRANCH"
+        
+        # Extract tool name from branch (tool/<agent_name>/...)
+        if [[ $SOURCE_BRANCH =~ ^tool/([^/]+)/ ]]; then
+          TOOL_NAME="${BASH_REMATCH[1]}"
+          echo "Tool name: $TOOL_NAME"
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Check if all changed files are in the correct tool directory
+          INVALID_FILES=""
+          while IFS= read -r file; do
+            if [[ ! "$file" =~ ^tools/$TOOL_NAME/ ]]; then
+              INVALID_FILES="$INVALID_FILES\n$file"
+            fi
+          done <<< "$CHANGED_FILES"
+          
+          if [[ -n "$INVALID_FILES" ]]; then
+            echo "❌ Path Policy Violation!"
+            echo "Branch '$SOURCE_BRANCH' is only allowed to modify files in 'tools/$TOOL_NAME/'."
+            echo "Invalid files found:$INVALID_FILES"
+            exit 1
+          else
+            echo "✅ Path Policy Check passed!"
+            echo "All changes are within the allowed directory: tools/$TOOL_NAME/"
+          fi
+        else
+          echo "ℹ️  Branch does not follow tool/<agent_name>/ pattern. Skipping path policy check."
+        fi
