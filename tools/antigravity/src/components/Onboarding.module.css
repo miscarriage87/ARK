@@ -78,8 +78,9 @@
 
 .input {
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: #1F2937;
+    /* Tailwind gray-800 equivalent */
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 0.75rem;
     padding: 1rem;
     font-size: 1.125rem;
