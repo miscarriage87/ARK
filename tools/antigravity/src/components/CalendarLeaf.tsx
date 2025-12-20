@@ -3,9 +3,11 @@ import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useState } from "react";
 import { Quote, Share2, Heart } from "lucide-react";
 import styles from "./CalendarLeaf.module.css";
+import ConceptOverlay from "./ConceptOverlay";
 
 export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, dateStr: string, userId?: string }) {
     const [revealed, setRevealed] = useState(false);
+    const [activeConcept, setActiveConcept] = useState<{ word: string, definition: string } | null>(null);
 
     const y = useMotionValue(0);
     const rotate = useTransform(y, [0, 300], [0, 15]);
@@ -49,8 +51,82 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
         }
     };
 
+    // Robust Interactive Text Rendering
+    const renderInteractiveText = (text: string, conceptsJson: string | null) => {
+        if (!conceptsJson || !text) return text;
+
+        try {
+            const concepts = JSON.parse(conceptsJson);
+            if (!Array.isArray(concepts) || concepts.length === 0) return text;
+
+            // Sort by length desc (longest match first)
+            concepts.sort((a: any, b: any) => b.word.length - a.word.length);
+
+            // Escape regex chars
+            const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Build regex with word boundaries to avoid partial matches inside words
+            // Flag 'i' for case insensitive
+            const pattern = new RegExp(`\\b(${concepts.map((c: any) => escapeRegExp(c.word)).join('|')})\\b`, 'gi');
+
+            const matches = text.match(pattern);
+            if (!matches) return text;
+
+            const result = [];
+            let lastIndex = 0;
+            let match;
+            const iterPattern = new RegExp(`\\b(${concepts.map((c: any) => escapeRegExp(c.word)).join('|')})\\b`, 'gi');
+
+            while ((match = iterPattern.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    result.push(text.substring(lastIndex, match.index));
+                }
+
+                const matchedWord = match[0];
+                const concept = concepts.find((c: any) => c.word.toLowerCase() === matchedWord.toLowerCase());
+
+                if (concept) {
+                    result.push(
+                        <span
+                            key={match.index}
+                            onClick={(e) => { e.stopPropagation(); setActiveConcept(concept); }}
+                            style={{
+                                textDecoration: 'underline',
+                                textDecorationStyle: 'dashed',
+                                textDecorationColor: 'hsl(var(--primary))',
+                                cursor: 'pointer',
+                                textUnderlineOffset: '4px'
+                            }}
+                        >
+                            {matchedWord}
+                        </span>
+                    );
+                } else {
+                    result.push(matchedWord);
+                }
+
+                lastIndex = iterPattern.lastIndex;
+            }
+
+            if (lastIndex < text.length) {
+                result.push(text.substring(lastIndex));
+            }
+
+            return result;
+
+        } catch (e) {
+            console.error("Interaction Error", e);
+            return text;
+        }
+    };
+
     return (
         <div className={styles.container}>
+            <ConceptOverlay
+                word={activeConcept?.word || null}
+                definition={activeConcept?.definition || null}
+                onClose={() => setActiveConcept(null)}
+            />
 
             {/* The Quote (Underneath) */}
             <div className={styles.quoteCard}>
@@ -58,7 +134,7 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
                     <Quote className={styles.icon} />
 
                     <h2 className={styles.quoteText}>
-                        "{quote.content}"
+                        "{renderInteractiveText(quote.content, quote.concepts)}"
                     </h2>
 
                     {quote.author && quote.author !== "Unbekannt" && quote.author !== "Unknown" && (
@@ -69,24 +145,11 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
 
                     {quote.explanation && (
                         <div className={styles.explanation}>
-                            {quote.explanation}
+                            {renderInteractiveText(quote.explanation, quote.concepts)}
                         </div>
                     )}
 
-                    {quote.concepts && (
-                        <div style={{ marginTop: '1.5rem', textAlign: 'left', width: '100%', fontSize: '0.75rem' }}>
-                            {(() => {
-                                try {
-                                    const concepts = JSON.parse(quote.concepts);
-                                    return concepts.map((c: any, i: number) => (
-                                        <div key={i} style={{ marginBottom: '0.5rem' }}>
-                                            <strong style={{ color: 'hsl(var(--primary))' }}>{c.word}:</strong> <span style={{ opacity: 0.8 }}>{c.definition}</span>
-                                        </div>
-                                    ));
-                                } catch (e) { return null; }
-                            })()}
-                        </div>
-                    )}
+
                 </div>
 
                 <div className={styles.actions}>

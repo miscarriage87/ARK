@@ -65,23 +65,29 @@ export async function getDailyQuote(userId: string) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
 
-            const prompt = `Generiere ein einzigartiges, inspirierendes Zitat für einen Nutzer mit Interesse an: ${prefs.interests || "allgemeiner Weisheit"}. 
+            const prompt = `Generiere ein einzigartiges, inspirierendes Zitat für einen Nutzer mit den Interessen: ${prefs.interests || "allgemeine Weisheit"}.
+            
+            WICHTIGE ANWEISUNGEN:
+            1. Wähle NUR EINES der Interessen aus oder generiere etwas Allgemeines. Versuche NICHT, alle Interessen zu kombinieren.
+            2. Sei SUTIL: Das Zitat soll nicht erzwungen wirken.
+            3. "concepts": Wähle NUR komplexe, philosophische oder fachspezifische Begriffe (z.B. "Stoizismus", "Entropie", "Amor Fati"). Erkläre KEINE alltäglichen Wörter wie "Leben", "Wissenschaft" oder "Glück". Wenn keine wirklich schwierigen Begriffe vorkommen, lass das Array leer.
             
             Regeln für die Ausgabe (JSON):
             - "content": Das Zitat auf Deutsch.
             - "author": Name des Autors. Wenn unbekannt oder generell, gib null zurück.
             - "explanation": Prägnante 2-3 Sätze Erklärung auf Deutsch.
             - "category": Ein Wort (Kategorie).
-            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" } für 1-3 schwierige oder wichtige Begriffe. WICHTIG: Der "word" Wert MUSS EXAKT so im "content" oder der "explanation" vorkommen (gleiche Schreibweise), damit er markiert werden kann.
+            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" }. WICHTIG: Der "word" Wert MUSS EXAKT so im "content" oder der "explanation" vorkommen (gleiche Schreibweise).
             `;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "Du bist ein weiser Assistent, der tägliche Inspiration liefert." },
+                    { role: "system", content: "Du bist ein weiser, tiefsinniger Mentor. Du bevorzugst Tiefe vor Breite." },
                     { role: "user", content: prompt }
                 ],
-                response_format: { type: "json_object" }
+                response_format: { type: "json_object" },
+                temperature: 1.15
             });
 
             const content = completion.choices[0].message.content;
