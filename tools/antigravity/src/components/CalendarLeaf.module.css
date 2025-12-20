@@ -1,0 +1,185 @@
+.container {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 3/4;
+    margin: 2rem auto;
+    perspective: 1000px;
+}
+
+/* The Daily Quote Card (Underneath) */
+.quoteCard {
+    position: absolute;
+    inset: 0;
+    background-color: hsl(var(--card-bg));
+    border: 1px solid hsl(var(--card-border));
+    border-radius: 1rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    z-index: 0;
+}
+
+.icon {
+    width: 2rem;
+    height: 2rem;
+    color: hsl(var(--primary));
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.quoteText {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+}
+
+.quoteAuthor {
+    color: hsl(var(--secondary));
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.explanation {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    line-height: 1.5;
+    max-width: 250px;
+    margin-bottom: 1rem;
+}
+
+.actions {
+    position: absolute;
+    bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.actionBtn {
+    padding: 0.75rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actionBtn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* The Tear-Off Leaf (Top) */
+.leaf {
+    position: absolute;
+    inset: 0;
+    background-color: #ffffff;
+    /* Explicit white for paper look */
+    color: #000000;
+    /* Explicit black ink */
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    box-shadow: var(--shadow-lg);
+    z-index: 10;
+    transform-origin: top;
+    overflow: hidden;
+}
+
+.leaf:active {
+    cursor: grabbing;
+}
+
+.header {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0.4;
+}
+
+.dayNumber {
+    font-size: 8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0;
+}
+
+.monthName {
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 300;
+    margin-top: -1rem;
+    /* tighten */
+}
+
+.footer {
+    position: absolute;
+    bottom: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hint {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #9ca3af;
+}
+
+/* Simple pill shape for visual cue */
+.pill {
+    width: 0.25rem;
+    height: 2rem;
+    background-color: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.pillInner {
+    width: 100%;
+    height: 100%;
+    background-color: #9ca3af;
+    animation: pulse 1.5s infinite;
+    transform-origin: top;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scaleY(0.5);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}

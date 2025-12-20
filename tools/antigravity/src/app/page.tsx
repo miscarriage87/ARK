@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
 import CalendarLeaf from "@/components/CalendarLeaf";
 import Onboarding from "@/components/Onboarding";
+import styles from "./page.module.css";
 
 export default async function Home() {
   const headersList = await headers();
@@ -19,10 +20,10 @@ export default async function Home() {
   // If no user record, or onboarding incomplete -> Show Onboarding
   if (!user || !user.onboardingCompleted) {
     return (
-      <main className="container">
-        <div className="text-center mb-12 animate-fade-in px-4">
-          <h1 className="title text-5xl md:text-7xl mb-4">ARK</h1>
-          <p className="text-xl md:text-2xl text-[hsl(var(--foreground))] opacity-80 font-light tracking-wide">
+      <main className={styles.main}>
+        <div className={styles.intro}>
+          <h1 className={styles.heroTitle}>ARK</h1>
+          <p className={styles.heroSubtitle}>
             Tägliche Weisheit, passend zu deiner Schwerkraft.
           </p>
         </div>
@@ -36,12 +37,12 @@ export default async function Home() {
   const now = new Date().toISOString();
 
   return (
-    <main className="container justify-start pt-8 pb-12">
-      <div className="w-full max-w-md flex justify-between items-center px-4 mb-4">
-        <div className="text-2xl font-serif font-bold tracking-tighter">ARK</div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-400"></div>
-          <div className="text-sm font-mono opacity-50 uppercase">{user.name || "Entdecker"}</div>
+    <main className={`${styles.main} ${styles.mainStart}`}>
+      <div className={styles.headerBar}>
+        <div className={styles.logoSmall}>ARK</div>
+        <div className={styles.profileContainer}>
+          <div className={styles.statusDot}></div>
+          <div className={styles.profileName}>{user.name || "Entdecker"}</div>
         </div>
       </div>
 
