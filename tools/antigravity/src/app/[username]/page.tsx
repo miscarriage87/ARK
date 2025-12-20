@@ -17,9 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function UserPage({ params }: Props) {
     const { username } = await params;
     const decodedName = decodeURIComponent(username);
+    console.log(`[UserPage] Loading for: ${decodedName}`);
 
     // 1. Try to find user by Name
     // Note: Schema has `name` as unique.

@@ -3,6 +3,7 @@ import { getDailyQuote } from "@/lib/ai-service";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+    console.log("[API] GET /api/quote/daily called");
     const userId = req.headers.get("x-user-id");
 
     if (!userId) {

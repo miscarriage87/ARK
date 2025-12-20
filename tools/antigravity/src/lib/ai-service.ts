@@ -50,6 +50,7 @@ export async function getDailyQuote(userId: string) {
     });
 
     if (history) {
+        console.log(`[QuoteService] History found for user ${userId}. Returning cached quote.`);
         return {
             ...history.quote,
             isNew: false
