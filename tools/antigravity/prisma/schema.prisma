@@ -8,60 +8,67 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique // Name acts as the identifier for URL
   
-  // Preferences
-  name          String?
   onboardingCompleted Boolean @default(false)
-  preferences   String?   // JSON string of UserPreferences
+  preferences         String? // JSON string
   
-  // Relations
-  history       DailyView[]
-  ratings       Rating[]
+  views     DailyView[]
+  ratings   Rating[]
+  shares    Share[]
 }
 
 model Quote {
-  id            String    @id @default(cuid())
-  content       String    // The actual quote text
-  author        String?
-  explanation   String?   // AI generated context/explanation
-  category      String    // e.g., "Spiritual", "Health", etc.
-  tags          String?   // JSON string array
+  id          Int      @id @default(autoincrement())
+  content     String
+  author      String?
+  explanation String?
+  category    String?  // The "Tag" or "Topic"
+  tags        String?  // Comma separated
   
-  // Metadata
-  generatedAt   DateTime  @default(now())
-  sourceModel   String?   // e.g. "gpt-4o"
+  generatedAt DateTime @default(now())
+  sourceModel String? // "gpt-4o", "mock"
   
-  // Relations
-  views         DailyView[]
-  ratings       Rating[]
+  views       DailyView[]
+  ratings     Rating[]
+  shares      Share[]
 
   @@index([category])
 }
 
 model DailyView {
-  id            String    @id @default(cuid())
-  userId        String
-  quoteId       String
-  viewedAt      DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    String
+  quoteId   Int
+  viewedAt  DateTime @default(now())
   
-  date          String    // YYYY-MM-DD for uniqueness per user per day if needed
+  date      String   // "YYYY-MM-DD"
   
-  user          User      @relation(fields: [userId], references: [id])
-  quote         Quote     @relation(fields: [quoteId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  quote     Quote    @relation(fields: [quoteId], references: [id])
 
-  @@unique([userId, date]) // One quote per user per day? Or main quote.
+  @@unique([userId, date])
 }
 
 model Rating {
-  id            String    @id @default(cuid())
-  userId        String
-  quoteId       String
-  score         Int       // 1 (Dislike) to 5 (Like), or simple 0/1
-  createdAt     DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  quoteId   Int
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+  score     Int      
+  createdAt DateTime @default(now())
+}
 
-  user          User      @relation(fields: [userId], references: [id])
-  quote         Quote     @relation(fields: [quoteId], references: [id])
+model Share {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  quoteId   Int
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+  platform  String?
+  createdAt DateTime @default(now())
 }

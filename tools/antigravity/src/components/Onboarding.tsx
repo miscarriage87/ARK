@@ -6,11 +6,16 @@ import styles from "./Onboarding.module.css";
 
 const INTERESTS = ["Stoizismus", "Achtsamkeit", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
 
-export default function Onboarding() {
+interface OnboardingProps {
+    initialName?: string;
+}
+
+export default function Onboarding({ initialName }: OnboardingProps) {
     const router = useRouter();
     const [step, setStep] = useState(0);
     const [selections, setSelections] = useState<string[]>([]);
-    const [name, setName] = useState("");
+    // Use initialName if provided
+    const [name, setName] = useState(initialName || "");
     const [loading, setLoading] = useState(false);
 
     const toggleInterest = (interest: string) => {
@@ -41,8 +46,13 @@ export default function Onboarding() {
         exit: { x: -50, opacity: 0 }
     };
 
+    // If name is pre-filled, we might want to skip step 1 or change the flow.
+    // Requirement: "system would already know who is the current user" -> So name is known.
+    // We just need interests.
+
     return (
         <div className={styles.card}>
+            {/* Progress Bar */}
             <div className={styles.progressBarContainer}>
                 <motion.div
                     className={styles.progressBarFill}
@@ -62,11 +72,12 @@ export default function Onboarding() {
                         <h2 className={styles.heading}>Was inspiriert dich?</h2>
                         <p className={styles.subtext}>Wähle ein paar Themen für deine tägliche Inspiration.</p>
 
-                        <div className={styles.chipContainer}>
+                        <div className={styles.chipContainer} style={{ zIndex: 10, position: 'relative' }}>
                             {INTERESTS.map(item => (
                                 <button
                                     key={item}
                                     onClick={() => toggleInterest(item)}
+                                    type="button"
                                     className={`${styles.chip} ${selections.includes(item) ? styles.chipSelected : ""}`}
                                 >
                                     {item}
@@ -75,16 +86,23 @@ export default function Onboarding() {
                         </div>
 
                         <button
-                            onClick={() => setStep(1)}
+                            onClick={() => {
+                                if (initialName) {
+                                    submitProfile(); // Skip name step if known
+                                } else {
+                                    setStep(1);
+                                }
+                            }}
                             disabled={selections.length === 0}
                             className={`${styles.button} ${styles.buttonNext}`}
+                            style={{ zIndex: 20, position: 'relative' }}
                         >
-                            Weiter
+                            {initialName ? "Reise starten" : "Weiter"}
                         </button>
                     </motion.div>
                 )}
 
-                {step === 1 && (
+                {step === 1 && !initialName && (
                     <motion.div
                         key="step2"
                         variants={variants}

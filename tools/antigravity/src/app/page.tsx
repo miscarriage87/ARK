@@ -1,52 +1,43 @@
-import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { getDailyQuote } from "@/lib/ai-service";
-import CalendarLeaf from "@/components/CalendarLeaf";
-import Onboarding from "@/components/Onboarding";
+"use client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import styles from "./page.module.css";
 
-export default async function Home() {
-  const headersList = await headers();
-  const userId = headersList.get("x-user-id");
+export default function Home() {
+  const router = useRouter();
+  const [name, setName] = useState("");
 
-  if (!userId) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  }
-
-  // Fetch user profile
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-
-  // Deciding View:
-  // If no user record, or onboarding incomplete -> Show Onboarding
-  if (!user || !user.onboardingCompleted) {
-    return (
-      <main className={styles.main}>
-        <div className={styles.intro}>
-          <h1 className={styles.heroTitle}>ARK</h1>
-          <p className={styles.heroSubtitle}>
-            Tägliche Weisheit, passend zu deiner Schwerkraft.
-          </p>
-        </div>
-        <Onboarding />
-      </main>
-    );
-  }
-
-  // User is onboarded, get quote
-  const quote = await getDailyQuote(userId);
-  const now = new Date().toISOString();
+  const go = () => {
+    if (name.trim()) {
+      router.push(`/${encodeURIComponent(name.trim())}`);
+    }
+  };
 
   return (
-    <main className={`${styles.main} ${styles.mainStart}`}>
-      <div className={styles.headerBar}>
-        <div className={styles.logoSmall}>ARK</div>
-        <div className={styles.profileContainer}>
-          <div className={styles.statusDot}></div>
-          <div className={styles.profileName}>{user.name || "Entdecker"}</div>
-        </div>
+    <main className={styles.main}>
+      <div className={styles.intro}>
+        <h1 className={styles.heroTitle}>ARK</h1>
+        <p className={styles.heroSubtitle}>
+          Dein digitaler Begleiter. Wie heißt du?
+        </p>
       </div>
 
-      <CalendarLeaf quote={quote} dateStr={now} />
+      <div className={styles.headerBar} style={{ flexDirection: 'column', gap: '1rem' }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name eingeben..."
+          className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-lg focus:outline-none focus:border-[hsl(var(--primary))]"
+          style={{ color: 'white' }}
+          onKeyDown={(e) => e.key === "Enter" && go()}
+        />
+        <button
+          onClick={go}
+          className="px-8 py-3 rounded-full bg-white text-black font-bold hover:bg-gray-200 transition"
+        >
+          Los geht's
+        </button>
+      </div>
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Quote, Share2, Heart } from "lucide-react";
 import styles from "./CalendarLeaf.module.css";
 
-export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: string }) {
+export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, dateStr: string, userId?: string }) {
     const [revealed, setRevealed] = useState(false);
 
     const y = useMotionValue(0);
