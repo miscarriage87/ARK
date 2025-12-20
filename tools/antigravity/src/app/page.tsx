@@ -27,8 +27,12 @@ export default function Home() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name eingeben..."
-          className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-lg focus:outline-none focus:border-[hsl(var(--primary))]"
-          style={{ color: 'white' }}
+          className="w-full rounded-xl p-4 text-lg focus:outline-none"
+          style={{
+            backgroundColor: '#1f2937',
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}
           onKeyDown={(e) => e.key === "Enter" && go()}
         />
         <button

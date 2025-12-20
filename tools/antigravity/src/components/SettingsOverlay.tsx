@@ -96,6 +96,20 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
                         </div>
 
                         <div className={styles.section}>
+                            <h3 className={styles.sectionTitle}>Deine Sammlung</h3>
+                            <button
+                                onClick={() => {
+                                    router.push(`/${encodeURIComponent(user.name)}/archive`);
+                                    onClose();
+                                }}
+                                className={styles.chip}
+                                style={{ width: '100%', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' }}
+                            >
+                                Zum Archiv / Verlauf
+                            </button>
+                        </div>
+
+                        <div className={styles.section}>
                             <h3 className={styles.sectionTitle}>App Installation</h3>
                             {ios ? (
                                 <div className={styles.installGuide}>
