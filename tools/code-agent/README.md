@@ -1,12 +1,29 @@
 # Code-Agent Tool
 
-Dieser Ordner enthält alle Dateien und Konfigurationen für das Code-Agent Tool.
+**Integration & Deployment für ARK**
 
-## Arbeitsregeln
-- Branch-Namespace: `tool/code-agent/<topic>`
-- Nur Änderungen in `/tools/code-agent/` erlaubt
-- PRs nach `main` via Pull Request
+## 🎯 Deine Rolle
+- Integration verschiedener Tool-Outputs
+- Testing & Quality Assurance
+- CI/CD & Deployment-Automation
+- Performance-Optimierung
 
-## Struktur
-- `README.md` - Diese Datei
-- Weitere tool-spezifische Dateien folgen hier
+## 📁 Dein Arbeitsbereich
+```
+tools/code-agent/
+├── README.md          # Diese Datei
+├── integration/      # Tool-Integration
+├── testing/          # Test Suites & QA
+├── deployment/       # CI/CD Scripts
+├── performance/      # Optimization
+└── scripts/          # Automation Scripts
+```
+
+## 🔄 Workflow
+1. **Branch**: `tool/code-agent/<topic>`
+2. **Arbeiten**: Nur in `/tools/code-agent/`
+3. **Commit**: `tool(code-agent): <beschreibung>`
+4. **PR**: Nach `main`
+
+## 📋 Regeln
+Siehe [`agents.md`](../../agents.md) für vollständige Regeln.

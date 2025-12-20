@@ -1,12 +1,29 @@
 # ChatGPT Tool
 
-Dieser Ordner enthält alle Dateien und Konfigurationen für das ChatGPT Tool.
+**Content Generation & NLP für ARK**
 
-## Arbeitsregeln
-- Branch-Namespace: `tool/chatgpt/<topic>`
-- Nur Änderungen in `/tools/chatgpt/` erlaubt
-- PRs nach `main` via Pull Request
+## 🎯 Deine Rolle
+- Content-Generierung & Spruch-Erstellung
+- NLP & Textverarbeitung
+- Personalisierungs-Algorithmen
+- Kategorisierung & Themen-Strukturierung
 
-## Struktur
-- `README.md` - Diese Datei
-- Weitere tool-spezifische Dateien folgen hier
+## 📁 Dein Arbeitsbereich
+```
+tools/chatgpt/
+├── README.md          # Diese Datei
+├── content/          # Spruch-Templates & Generierung
+├── personalization/  # Persönlichkeits-Profile
+├── categories/       # Themen & Kategorien
+├── nlp/             # Text-Processing
+└── templates/       # Content-Templates
+```
+
+## 🔄 Workflow
+1. **Branch**: `tool/chatgpt/<topic>`
+2. **Arbeiten**: Nur in `/tools/chatgpt/`
+3. **Commit**: `tool(chatgpt): <beschreibung>`
+4. **PR**: Nach `main`
+
+## 📋 Regeln
+Siehe [`agents.md`](../../agents.md) für vollständige Regeln.

@@ -1,194 +1,248 @@
-# Multi-Agent / Multi-Tool GitHub Workflow (Windows + Cloud Tools)
+# Multi-Agent Workflow Rules
 
-Diese Datei definiert die verbindlichen Regeln, wie verschiedene Tools/Agenten (Windows-Apps und Cloud-Plattformen)
-mit diesem Repository arbeiten dürfen.
-
-Ziele:
-- Keine Direkt-Pushes nach `main`
-- Klare Trennung pro Tool (Branch + Ordner)
-- Saubere PRs, nachvollziehbare Commits, minimale Konflikte
-- Optional: technische Durchsetzung über CI (Path-Policy)
+> **Universelle Regeln für alle Tools/Agenten im ARK Repository**
 
 ---
 
-## 1) Grundprinzipien (nicht verhandelbar)
+## 🎯 **Deine Tool-Identität**
 
-1. `main` ist geschützt.
-   - Kein Tool/Agent darf direkt nach `main` pushen.
-   - Änderungen kommen ausschließlich via Pull Request (PR).
-
-2. Ein Tool/Agent arbeitet ausschließlich in:
-   - dem eigenen Branch-Namespace `tool/<agent_name>/...`
-   - und dem eigenen Ordner `/tools/<agent_name>/...`
-
-3. Keine Tool-übergreifenden Änderungen:
-   - Ein Tool darf keine Dateien in einem fremden Tool-Ordner ändern.
-   - Ein Tool darf keine Dateien unter `/core/**` ändern, sofern nicht explizit beauftragt.
-
-4. Kleine, gut beschriebene PRs:
-   - Lieber mehrere kleine PRs als ein großer "Megapush".
-   - PRs sollen möglichst isolierte Änderungen enthalten.
+**Du bist**: `{TOOL_NAME}` *(ersetze mit: antigravity, chatgpt, kiro, oder code-agent)*  
+**Dein Arbeitsbereich**: `/tools/{TOOL_NAME}/`  
+**Dein Branch-Pattern**: `tool/{TOOL_NAME}/{TOPIC}`
 
 ---
 
-## 2) Repo-Struktur (Ownership-Zonen)
+## 🚨 **Die 3 Goldenen Regeln (NICHT VERHANDELBAR)**
 
-Top-Level Zonen:
-- `/tools/<agent_name>/`  Tool-spezifischer Bereich. Hier darf *nur* das jeweilige Tool Änderungen machen.
-- `/core/`  Kern-Logik, gemeinsame Libraries, zentrale Konfiguration.
-  Änderungen nur nach expliziter Anweisung und idealerweise durch Menschen-Review.
-- `/docs/`  Dokumentation (kann optional für Tools freigegeben werden, falls gewünscht).
+### 1️⃣ **Branch-Isolation**
+```bash
+# Arbeite NUR in diesem Branch-Pattern:
+tool/{TOOL_NAME}/{TOPIC}
 
-Empfohlene Standardordner pro Tool:
-- `/tools/antigravity/`
-- `/tools/chatgpt/`
-- `/tools/kiro/`
-- `/tools/code-agent/`
+# Beispiele:
+tool/kiro/setup-frontend
+tool/chatgpt/content-generation
+tool/antigravity/api-development
+```
 
----
+### 2️⃣ **Pfad-Isolation** 
+```bash
+# Ändere NUR Dateien in:
+/tools/{TOOL_NAME}/
 
-## 3) Branch-Konvention (Naming Standard)
+# NIEMALS in:
+/tools/andere-tools/
+/.github/
+/README.md
+/agents.md
+```
 
-Jedes Tool nutzt einen eigenen Branch-Namespace:
-- `tool/antigravity/<topic>`
-- `tool/chatgpt/<topic>`
-- `tool/kiro/<topic>`
-- `tool/code-agent/<topic>`
-
-Beispiele:
-- `tool/code-agent/folder-structure-init`
-- `tool/kiro/gui-widgets`
-- `tool/antigravity/refactor-ingestion`
-
-Regeln:
-- Branches werden immer von `origin/main` abgeleitet.
-- Branches werden kurzlebig gehalten: PR auf, mergen, Branch löschen.
-
----
-
-## 4) Arbeitsablauf (Workflow)
-
-### 4.1 Start einer Aufgabe (für jedes Tool gleich)
-
-1. Synchronisieren:
-   - `git fetch --all`
-
-2. Branch erstellen oder aktualisieren:
-   - Neuen Branch von `origin/main` erstellen
-
-3. Änderungen durchführen:
-   - Ausschließlich im eigenen Tool-Ordner `/tools/<agent_name>/`
-
-4. Committen:
-   - Präzise Commit Message (siehe Abschnitt 5)
-
-5. Push:
-   - In den eigenen Branch
-
-6. Pull Request:
-   - PR von `tool/<agent_name>/<topic>` nach `main`
-
-### 4.2 Merge nach `main`
-
-- Merge erfolgt nur per PR.
-- Optional: Merge nur, wenn Checks (CI) grün sind.
-- Nach Merge: Branch löschen.
+### 3️⃣ **Merge-Isolation**
+```bash
+# Erstelle IMMER Pull Request nach main
+# NIEMALS direkter Push nach main
+git push origin tool/{TOOL_NAME}/{TOPIC}
+# → Dann PR via GitHub UI
+```
 
 ---
 
-## 5) Commit- und PR-Standards
+## 🔄 **Dein Standard-Workflow**
 
-### 5.1 Commit Messages (empfohlen)
+### **Schritt 1: Vorbereitung**
+```bash
+# Repository klonen (falls noch nicht geschehen)
+git clone https://github.com/miscarriage87/ARK.git
+cd ARK
 
-Format:
-- `tool(<agent_name>): <kurze beschreibung>`
+# Aktuellen Stand holen
+git fetch --all
+git checkout main
+git pull origin main
+```
 
-Beispiele:
-- `tool(code-agent): add initial folder structure for codex`
-- `tool(kiro): implement settings panel skeleton`
-- `tool(antigravity): refactor vector store interface`
+### **Schritt 2: Branch erstellen**
+```bash
+# Neuen Branch erstellen
+git checkout -b tool/{TOOL_NAME}/{TOPIC}
 
-### 5.2 Pull Request Beschreibung (Minimum)
+# Beispiel für KIRO:
+git checkout -b tool/kiro/setup-webpack
+```
 
-Jeder PR enthält:
-- Was wurde geändert?
-- Welche Dateien / Module?
-- Wie testen / verifizieren?
-- Risiken / offene Punkte
+### **Schritt 3: Arbeiten**
+```bash
+# Wechsle in deinen Ordner
+cd tools/{TOOL_NAME}/
 
----
+# Arbeite nur hier - erstelle/bearbeite Dateien
+# Beispiel-Struktur:
+tools/{TOOL_NAME}/
+├── README.md
+├── src/
+├── config/
+└── docs/
+```
 
-## 6) Harte Durchsetzung (empfohlen): Path-Policy via CI
+### **Schritt 4: Committen**
+```bash
+# Änderungen hinzufügen
+git add tools/{TOOL_NAME}/
 
-Um sicherzustellen, dass Tools/Agenten ausschließlich im eigenen Ordner ändern,
-wird eine CI-Regel empfohlen:
+# Commit mit Standard-Format
+git commit -m "tool({TOOL_NAME}): {KURZE_BESCHREIBUNG}"
 
-- PRs aus `tool/code-agent/**` dürfen nur Dateien unter `/tools/code-agent/**` ändern
-- PRs aus `tool/kiro/**` dürfen nur Dateien unter `/tools/kiro/**` ändern
-- etc.
+# Beispiele:
+git commit -m "tool(kiro): setup webpack configuration"
+git commit -m "tool(chatgpt): add content generation templates"
+```
 
-Wenn ein PR gegen diese Regel verstößt:
-- CI Check schlägt fehl
-- PR darf nicht gemerged werden
+### **Schritt 5: Push & PR**
+```bash
+# Branch pushen
+git push origin tool/{TOOL_NAME}/{TOPIC}
 
-Hinweis:
-Die CI-Regel ist tool-unabhängig (Windows-App, Cloud-Agent, CLI — alles gleich).
-
----
-
-## 7) DeepLink / "Branch-Link"-Regel (praktische Nutzung)
-
-Wenn ein Tool über eine GUI/Plattform arbeitet, wird ihm direkt der Link zum
-zugehörigen Branch gegeben (DeepLink), plus diese 3 Arbeitsregeln:
-
-1. Arbeite nur im Branch `tool/<agent_name>/...`
-2. Ändere nur `/tools/<agent_name>/...`
-3. Erstelle PR nach `main` (kein Direkt-Push nach `main`)
-
-Das reduziert Fehler und verhindert, dass Tools "aus Versehen" in falschen Bereichen arbeiten.
-
----
-
-## 8) Konfliktvermeidung (Best Practices)
-
-- Pro Tool möglichst eigene, isolierte Module/Dateien.
-- Gemeinsame Änderungen (z. B. Build-System, globale Config) nur:
-  - in separatem "human" oder "supervisor" Branch,
-  - oder mit expliziter Beauftragung und Review.
-- PRs klein halten.
-- Häufig rebasen/mergen von `origin/main`, wenn PRs länger als 1 Tag offen sind.
-
----
-
-## 9) Rollenmodell (optional, aber nützlich)
-
-- Mensch/Supervisor:
-  - entscheidet über Merge nach `main`
-  - verwaltet Strukturänderungen in `/core`
-  - kontrolliert globale Konfiguration
-
-- Tool/Agent:
-  - implementiert klar abgegrenzte Aufgaben
-  - liefert PRs mit sauberer Beschreibung
-  - respektiert Pfad- und Branch-Grenzen
+# Dann via GitHub UI:
+# https://github.com/miscarriage87/ARK/pulls
+# → "New Pull Request"
+# → Base: main ← Compare: tool/{TOOL_NAME}/{TOPIC}
+```
 
 ---
 
-## 10) Definition "Done" für Tool-Arbeit
+## 📝 **PR-Template**
 
-Eine Tool-Aufgabe gilt als abgeschlossen, wenn:
-- PR erstellt wurde
-- Änderungen innerhalb erlaubter Pfade liegen
-- Minimale Dokumentation/Notiz im Tool-Ordner existiert (README oder Kommentar)
-- Checks/Tests (falls vorhanden) grün sind
+```markdown
+## Tool: {TOOL_NAME}
+**Branch**: `tool/{TOOL_NAME}/{TOPIC}`
+
+## Was wurde geändert?
+- [Kurze Beschreibung der Änderungen]
+
+## Geänderte Dateien
+- `tools/{TOOL_NAME}/...`
+
+## Wie testen?
+- [Schritte zum Testen]
+
+## Nächste Schritte
+- [Was sollte als nächstes gemacht werden]
+```
 
 ---
 
-## 11) Quickstart: Neue Tools hinzufügen
+## ⚠️ **Wichtige Einschränkungen**
 
-1. Ordner anlegen: `/tools/<new_agent>/`
-2. Branch-Namespace verwenden: `tool/<new_agent>/<topic>`
-3. Optional CI Path-Policy erweitern
-4. Regeln aus dieser Datei an das Tool geben
+### ❌ **VERBOTEN**
+- Direkter Push nach `main`
+- Änderungen außerhalb von `/tools/{TOOL_NAME}/`
+- Änderungen in anderen Tool-Ordnern
+- Änderungen an Repository-Konfiguration (außer explizit beauftragt)
+
+### ✅ **ERLAUBT**
+- Alles in `/tools/{TOOL_NAME}/`
+- Mehrere kleine PRs statt einem großen
+- Eigene Dokumentation im Tool-Ordner
+- Koordination mit anderen Tools via Issues/Discussions
 
 ---
+
+## 🛠️ **Tool-spezifische Rollen**
+
+### **Antigravity** (`/tools/antigravity/`)
+- Backend-Entwicklung & API-Design
+- Datenbank-Schema & Server-Logik
+- Authentication & Security
+
+### **ChatGPT** (`/tools/chatgpt/`)
+- Content-Generierung & NLP
+- Spruch-Kategorisierung & Templates
+- Personalisierungs-Algorithmen
+
+### **KIRO** (`/tools/kiro/`)
+- Frontend-Entwicklung & UI/UX
+- Build-System & Development-Tools
+- Progressive Web App Features
+
+### **Code-Agent** (`/tools/code-agent/`)
+- Integration & Deployment
+- Testing & Quality Assurance
+- CI/CD & Automation
+
+---
+
+## 🔍 **Automatische Durchsetzung**
+
+Das Repository hat eine **Path-Policy CI**, die automatisch prüft:
+
+```yaml
+# Wenn dein Branch: tool/kiro/feature
+# Dann dürfen nur Dateien in: tools/kiro/
+# geändert werden.
+
+# Bei Verstoß: ❌ CI schlägt fehl
+# Bei Einhaltung: ✅ CI ist grün
+```
+
+---
+
+## 🚀 **Schnellstart für {TOOL_NAME}**
+
+1. **Klone Repository**: `git clone https://github.com/miscarriage87/ARK.git`
+2. **Erstelle Branch**: `git checkout -b tool/{TOOL_NAME}/initial-setup`
+3. **Arbeite in**: `/tools/{TOOL_NAME}/`
+4. **Committe**: `git commit -m "tool({TOOL_NAME}): initial setup"`
+5. **Push & PR**: `git push origin tool/{TOOL_NAME}/initial-setup`
+
+---
+
+## 📚 **Projektkontext**
+
+**ARK** ist ein digitaler Abreißkalender mit:
+- Täglichen KI-generierten Sprüchen
+- Personalisierung basierend auf Nutzer-Profilen
+- Mobile-First Progressive Web App
+- Thematischer Strukturierung (Wochen-/Monatsthemen)
+
+**Vollständige Projektbeschreibung**: Siehe [README.md](README.md)
+
+---
+
+## 🆘 **Bei Problemen**
+
+### **CI schlägt fehl mit "Path Policy Violation"**
+→ Du hast Dateien außerhalb von `/tools/{TOOL_NAME}/` geändert
+
+### **Merge-Konflikt**
+```bash
+git fetch origin
+git rebase origin/main
+# Konflikte lösen, dann:
+git push --force-with-lease
+```
+
+### **Branch existiert schon**
+```bash
+git branch -D tool/{TOOL_NAME}/{TOPIC}
+git push origin --delete tool/{TOOL_NAME}/{TOPIC}
+```
+
+---
+
+## ✅ **Definition of Done**
+
+Eine Aufgabe ist abgeschlossen, wenn:
+- [ ] PR erstellt und gemerged
+- [ ] Alle Änderungen in `/tools/{TOOL_NAME}/`
+- [ ] CI-Checks sind grün
+- [ ] Minimale Dokumentation im Tool-Ordner vorhanden
+
+---
+
+<div align="center">
+
+**Bereit? Dann leg los mit deinem ersten Branch!** 🚀
+
+`git checkout -b tool/{TOOL_NAME}/getting-started`
+
+</div>
