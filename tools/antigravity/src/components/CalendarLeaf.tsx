@@ -18,8 +18,8 @@ export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: 
     };
 
     const day = new Date(dateStr).getDate();
-    const month = new Date(dateStr).toLocaleDateString("en-US", { month: "long" });
-    const weekday = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
+    const month = new Date(dateStr).toLocaleDateString("de-DE", { month: "long" });
+    const weekday = new Date(dateStr).toLocaleDateString("de-DE", { weekday: "long" });
 
     return (
         <div className="relative w-full max-w-sm aspect-[3/4] perspective-1000 mx-auto mt-8">
@@ -33,7 +33,7 @@ export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: 
                 </h2>
 
                 <p className="text-[hsl(var(--secondary))] uppercase tracking-widest text-xs font-semibold mb-6">
-                    — {quote.author || "Unknown"}
+                    — {quote.author || "Unbekannt"}
                 </p>
 
                 {quote.explanation && (
@@ -73,7 +73,7 @@ export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: 
                     </p>
 
                     <div className="absolute bottom-12 flex flex-col items-center gap-2">
-                        <p className="text-[10px] uppercase tracking-widest text-gray-400">Pull down to reveal</p>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400">Zum Enthüllen ziehen</p>
                         <div className="w-1 h-8 bg-gray-200 rounded-full overflow-hidden">
                             <div className="w-full h-full bg-gray-400 animate-pulse origin-top transform scale-y-50"></div>
                         </div>

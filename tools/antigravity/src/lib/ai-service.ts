@@ -8,22 +8,22 @@ const openai = process.env.OPENAI_API_KEY
 // Mock data for development without API Key
 const MOCK_QUOTES = [
     {
-        content: "The only way to do great work is to love what you do.",
+        content: "Der einzige Weg, großartige Arbeit zu leisten, ist zu lieben, was man tut.",
         author: "Steve Jobs",
-        explanation: "Passion is the fuel for excellence.",
+        explanation: "Leidenschaft ist der Treibstoff für Exzellenz.",
         category: "Motivation"
     },
     {
-        content: "In the middle of difficulty lies opportunity.",
+        content: "In der Mitte der Schwierigkeit liegt die Gelegenheit.",
         author: "Albert Einstein",
-        explanation: "Challenges often hide the best chances for growth.",
-        category: "Wisdom"
+        explanation: "Herausforderungen verbergen oft die besten Chancen für Wachstum.",
+        category: "Weisheit"
     },
     {
-        content: "Happiness depends upon ourselves.",
-        author: "Aristotle",
-        explanation: "External circumstances don't define your internal state.",
-        category: "Philosophy"
+        content: "Das Glück hängt von uns selbst ab.",
+        author: "Aristoteles",
+        explanation: "Äußere Umstände definieren nicht deinen inneren Zustand.",
+        category: "Philosophie"
     }
 ];
 
@@ -59,13 +59,13 @@ export async function getDailyQuote(userId: string) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
 
-            const prompt = `Generate a unique, inspiring quote for a user interested in: ${prefs.interests || "general wisdom"}. 
-      Return JSON format: { "content": "...", "author": "...", "explanation": "2 sentences max", "category": "one word" }`;
+            const prompt = `Generiere ein einzigartiges, inspirierendes Zitat für einen Nutzer mit Interesse an: ${prefs.interests || "allgemeiner Weisheit"}. 
+      Antworte im JSON Format: { "content": "Zitat auf Deutsch", "author": "Name", "explanation": "Maximal 2 Sätze Erklärung auf Deutsch", "category": "Ein Wort (Kategorie)" }`;
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "You are a wise assistant providing daily inspiration." },
+                    { role: "system", content: "Du bist ein weiser Assistent, der tägliche Inspiration liefert." },
                     { role: "user", content: prompt }
                 ],
                 response_format: { type: "json_object" }

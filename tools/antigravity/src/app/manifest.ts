@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'ARK - Digital Tear-off Calendar',
         short_name: 'ARK',
-        description: 'Your daily dose of gravity-defying wisdom.',
+        description: 'Deine tägliche Dosis Weisheit.',
         start_url: '/',
         display: 'standalone',
         background_color: '#0a0a0c', // Matches --background

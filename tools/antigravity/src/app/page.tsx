@@ -23,7 +23,7 @@ export default async function Home() {
         <div className="text-center mb-12 animate-fade-in px-4">
           <h1 className="title text-5xl md:text-7xl mb-4">ARK</h1>
           <p className="text-xl md:text-2xl text-[hsl(var(--foreground))] opacity-80 font-light tracking-wide">
-            Daily wisdom, tailored to your gravity.
+            Tägliche Weisheit, passend zu deiner Schwerkraft.
           </p>
         </div>
         <Onboarding />
@@ -41,7 +41,7 @@ export default async function Home() {
         <div className="text-2xl font-serif font-bold tracking-tighter">ARK</div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400"></div>
-          <div className="text-sm font-mono opacity-50 uppercase">{user.name || "Explorer"}</div>
+          <div className="text-sm font-mono opacity-50 uppercase">{user.name || "Entdecker"}</div>
         </div>
       </div>
 

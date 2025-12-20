@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-const INTERESTS = ["Stoicism", "Mindfulness", "Entrepreneurship", "Science", "Art", "Poetry", "Leadership", "Wellness"];
+const INTERESTS = ["Stoizismus", "Achtsamkeit", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
 
 export default function Onboarding() {
     const router = useRouter();
@@ -58,8 +58,8 @@ export default function Onboarding() {
                         initial="enter" animate="center" exit="exit"
                         className="flex-1 flex flex-col justify-center"
                     >
-                        <h2 className="text-2xl font-serif mb-2">What inspires you?</h2>
-                        <p className="text-sm text-gray-400 mb-6">Select a few topics to personalize your daily drops.</p>
+                        <h2 className="text-2xl font-serif mb-2">Was inspiriert dich?</h2>
+                        <p className="text-sm text-gray-400 mb-6">Wähle ein paar Themen für deine tägliche Inspiration.</p>
 
                         <div className="flex flex-wrap gap-2">
                             {INTERESTS.map(item => (
@@ -81,7 +81,7 @@ export default function Onboarding() {
                             disabled={selections.length === 0}
                             className="mt-8 self-end btn disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Next
+                            Weiter
                         </button>
                     </motion.div>
                 )}
@@ -93,12 +93,12 @@ export default function Onboarding() {
                         initial="enter" animate="center" exit="exit"
                         className="flex-1 flex flex-col justify-center"
                     >
-                        <h2 className="text-2xl font-serif mb-2">What should we call you?</h2>
-                        <p className="text-sm text-gray-400 mb-6">Optional, but nice.</p>
+                        <h2 className="text-2xl font-serif mb-2">Wie sollen wir dich nennen?</h2>
+                        <p className="text-sm text-gray-400 mb-6">Optional, aber nett.</p>
 
                         <input
                             type="text"
-                            placeholder="Your Name"
+                            placeholder="Dein Name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-lg focus:outline-none focus:border-[hsl(var(--primary))]"
@@ -109,7 +109,7 @@ export default function Onboarding() {
                             disabled={loading}
                             className="mt-8 w-full btn"
                         >
-                            {loading ? "Creating Personal Profile..." : "Start Journey"}
+                            {loading ? "Profil wird erstellt..." : "Reise starten"}
                         </button>
                     </motion.div>
                 )}
