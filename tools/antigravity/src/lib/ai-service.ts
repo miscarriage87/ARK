@@ -5,25 +5,31 @@ const openai = process.env.OPENAI_API_KEY
     ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     : null;
 
-// Mock data for development without API Key
+// Debug Log
+console.log("AI Service Init. Key present:", !!process.env.OPENAI_API_KEY);
+
+// Mock data for fallback
 const MOCK_QUOTES = [
     {
         content: "Der einzige Weg, großartige Arbeit zu leisten, ist zu lieben, was man tut.",
         author: "Steve Jobs",
         explanation: "Leidenschaft ist der Treibstoff für Exzellenz.",
-        category: "Motivation"
+        category: "Motivation",
+        concepts: JSON.stringify([{ word: "Leidenschaft", definition: "Starkes Gefühl der Begeisterung" }])
     },
     {
         content: "In der Mitte der Schwierigkeit liegt die Gelegenheit.",
         author: "Albert Einstein",
         explanation: "Herausforderungen verbergen oft die besten Chancen für Wachstum.",
-        category: "Weisheit"
+        category: "Weisheit",
+        concepts: JSON.stringify([{ word: "Gelegenheit", definition: "Günstiger Umstand" }])
     },
     {
         content: "Das Glück hängt von uns selbst ab.",
         author: "Aristoteles",
         explanation: "Äußere Umstände definieren nicht deinen inneren Zustand.",
-        category: "Philosophie"
+        category: "Philosophie",
+        concepts: JSON.stringify([{ word: "Glück", definition: "Subjektives Wohlbefinden" }])
     }
 ];
 
@@ -51,7 +57,7 @@ export async function getDailyQuote(userId: string) {
     }
 
     // 2. Generate or Fetch new quote
-    let quoteData;
+    let quoteData: any;
 
     if (openai) {
         try {
@@ -66,7 +72,7 @@ export async function getDailyQuote(userId: string) {
             - "author": Name des Autors. Wenn unbekannt oder generell, gib null zurück.
             - "explanation": Prägnante 2-3 Sätze Erklärung auf Deutsch.
             - "category": Ein Wort (Kategorie).
-            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" } für 1-3 schwierige oder wichtige Begriffe im Kontext (z.B. "Dichotomie der Kontrolle", "Achtsamkeit"). Wenn keine passenden Begriffe da sind, leeres Array.
+            - "concepts": Ein Array von Objekten { "word": "Begriff", "definition": "Kurze Erklärung" } für 1-3 schwierige oder wichtige Begriffe. WICHTIG: Der "word" Wert MUSS EXAKT so im "content" oder der "explanation" vorkommen (gleiche Schreibweise), damit er markiert werden kann.
             `;
 
             const completion = await openai.chat.completions.create({
@@ -84,24 +90,33 @@ export async function getDailyQuote(userId: string) {
             }
         } catch (error) {
             console.error("OpenAI Error:", error);
-            // Fallback to mock
+            // Fallback to mock logic will trigger if quoteData is still null
         }
     }
 
     // Fallback if no OpenAI or error
     if (!quoteData) {
+        console.log("Using Mock Data");
         const randomIndex = Math.floor(Math.random() * MOCK_QUOTES.length);
         quoteData = MOCK_QUOTES[randomIndex];
     }
 
     // 3. Save to DB
+    // Handle concepts safely (might be array from AI or string from Mock)
+    let conceptsStr = null;
+    if (quoteData.concepts) {
+        conceptsStr = typeof quoteData.concepts === 'string'
+            ? quoteData.concepts
+            : JSON.stringify(quoteData.concepts);
+    }
+
     const quote = await prisma.quote.create({
         data: {
             content: quoteData.content,
             author: quoteData.author,
             explanation: quoteData.explanation,
             category: quoteData.category,
-            concepts: quoteData.concepts ? JSON.stringify(quoteData.concepts) : null,
+            concepts: conceptsStr,
             sourceModel: openai ? "gpt-4o-mini" : "mock"
         }
     });
