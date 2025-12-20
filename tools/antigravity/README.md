@@ -1,41 +1,41 @@
-# Antigravity - Komplette ARK Implementation
+# ARK - Antigravity Implementation
 
-**Vollständige Abreißkalender-Anwendung**
+This is the **Antigravity** implementation of the ARK application, built with **Next.js 14+ (App Router)**.
 
-## 🎯 Deine Mission
-Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Ansatz:
+## 🚀 Features
 
-- ✅ **Frontend**: UI/UX Implementation
-- ✅ **Backend**: Server-Architektur & APIs
-- ✅ **KI-Integration**: Content-Generierung & Personalisierung
-- ✅ **Mobile**: Progressive Web App Features
-- ✅ **Deployment**: CI/CD & Hosting-Strategien
+-   **Complete PWA**: Responsive Mobile-First Design.
+-   **Personalized Experience**: Onboarding flow and daily quotes based on profile.
+-   **Premium UI**: Custom CSS Design System with animations and "Tear-off" effect.
+-   **Architecture**: Unified Frontend & Backend via Next.js.
+-   **AI Integration**: Service abstraction ready for real API integration.
 
-## 📁 Dein Arbeitsbereich
-```
-tools/antigravity/
-├── README.md          # Diese Datei
-├── frontend/          # UI/UX Implementation
-├── backend/           # Server & API
-├── ai/                # KI-Integration
-├── mobile/            # PWA Features
-├── deployment/        # CI/CD & Hosting
-└── docs/              # Dokumentation
-```
+## 🛠️ Tech Stack
 
-## 🔄 Workflow
-1. **Master-Branch**: `tool/antigravity`
-2. **Feature-Branches**: `tool/antigravity/{feature}`
-3. **Arbeiten**: Nur in `/tools/antigravity/`
-4. **Commit**: `tool(antigravity): <beschreibung>`
-5. **PR**: Nach `main`
+-   **Framework**: Next.js
+-   **Language**: TypeScript
+-   **Styling**: Vanilla CSS (Variables, CSS Modules)
+-   **State**: React Hooks + LocalStorage (MVP)
 
-## 🚀 Schnellstart
-```bash
-git checkout tool/antigravity 2>/dev/null || git checkout -b tool/antigravity
-cd tools/antigravity/
-# Implementiere komplette ARK-App hier
-```
+## 🏃‍♂️ Getting Started
 
-## 📋 Regeln
-Siehe [`agents.md`](../../agents.md) für vollständige Regeln.
+1.  **Install Dependencies**
+    ```bash
+    npm install
+    # or
+    pnpm install
+    ```
+
+2.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+
+3.  **Open in Browser**
+    Navigate to `http://localhost:3000`
+
+## 📱 Mobile View
+Open devtools and toggle "Device Toolbar" to see the mobile optimization.
+
+## 🧪 Testing
+Run `npm run lint` or `npm run build` to verify the codebase.
