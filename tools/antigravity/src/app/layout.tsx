@@ -1,20 +1,14 @@
-
-import type { Metadata } from 'next';
-import { Inter, Outfit } from 'next/font/google';
-import './globals.css';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'ARK - Daily Wisdom',
-  description: 'Your personalized daily tear-off calendar.',
-  manifest: '/manifest.json',
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/icons/apple-touch-icon.png',
+  title: "ARK | Daily Wisdom",
+  description: "Your personalized daily tear-off calendar.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0", // Prevent zoom on mobile
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
   },
-  themeColor: '#ffffff',
 };
 
 export default function RootLayout({
@@ -24,10 +18,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${outfit.variable}`}>
-        <main className="app-container">
-            {children}
-        </main>
+      <body suppressHydrationWarning>
+        {children}
       </body>
     </html>
   );

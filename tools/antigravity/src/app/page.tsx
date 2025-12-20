@@ -1,120 +1,51 @@
+import { headers } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { getDailyQuote } from "@/lib/ai-service";
+import CalendarLeaf from "@/components/CalendarLeaf";
+import Onboarding from "@/components/Onboarding";
 
-'use client';
+export default async function Home() {
+  const headersList = await headers();
+  const userId = headersList.get("x-user-id");
 
-import React, { useEffect, useState } from 'react';
-import QuoteCard from '@/components/QuoteCard';
-import { generateDailyQuote, UserProfile, Quote } from '@/lib/ai';
+  if (!userId) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
 
-export default function Home() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [nameInput, setNameInput] = useState('');
+  // Fetch user profile
+  const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  useEffect(() => {
-    // Check local storage for profile
-    const saved = localStorage.getItem('ark_profile');
-    if (saved) {
-      setProfile(JSON.parse(saved));
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (profile) {
-      setLoading(true);
-      generateDailyQuote(profile).then(q => {
-        setQuote(q);
-        setLoading(false);
-      });
-    }
-  }, [profile]);
-
-  const handleOnboarding = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nameInput.trim()) return;
-    const newProfile: UserProfile = {
-      name: nameInput,
-      interests: ['general'], // Default
-      mood: 'neutral'
-    };
-    localStorage.setItem('ark_profile', JSON.stringify(newProfile));
-    setProfile(newProfile);
-  };
-
-  if (loading) {
+  // Deciding View:
+  // If no user record, or onboarding incomplete -> Show Onboarding
+  if (!user || !user.onboardingCompleted) {
     return (
-      <div className="flex-center full-height">
-        <p className="fade-in">Loading your daily inspiration...</p>
-      </div>
+      <main className="container">
+        <div className="text-center mb-12 animate-fade-in px-4">
+          <h1 className="title text-5xl md:text-7xl mb-4">ARK</h1>
+          <p className="text-xl md:text-2xl text-[hsl(var(--foreground))] opacity-80 font-light tracking-wide">
+            Daily wisdom, tailored to your gravity.
+          </p>
+        </div>
+        <Onboarding />
+      </main>
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="flex-center full-height fade-in" style={{ flexDirection: 'column', padding: '2rem' }}>
-        <h1 style={{ marginBottom: '2rem' }}>Welcome to ARK</h1>
-        <p style={{ marginBottom: '2rem', textAlign: 'center', color: '#666' }}>
-          Your daily personalized wisdom awaits.
-        </p>
-        <form onSubmit={handleOnboarding} style={{ width: '100%', maxWidth: '300px' }}>
-          <input
-            type="text"
-            placeholder="What should we call you?"
-            value={nameInput}
-            onChange={e => setNameInput(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '1rem',
-              marginBottom: '1rem',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-              fontFamily: 'inherit'
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              padding: '1rem',
-              backgroundColor: '#1a1a1a',
-              color: 'white',
-              borderRadius: '8px',
-              fontWeight: '600'
-            }}
-          >
-            Start Journey
-          </button>
-        </form>
-      </div>
-    );
-  }
+  // User is onboarded, get quote
+  const quote = await getDailyQuote(userId);
+  const now = new Date().toISOString();
 
   return (
-    <div className="p-4 fade-in">
-      <header className="flex-center" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-        <h3 style={{ letterSpacing: '2px', textTransform: 'uppercase', fontSize: '1rem' }}>ARK</h3>
-      </header>
-
-      {quote && (
-        <QuoteCard
-          content={quote.content}
-          author={quote.author}
-          topic={quote.topic}
-          date={quote.date}
-        />
-      )}
-
-      <div className="text-center" style={{ marginTop: '2rem', color: '#999', fontSize: '0.8rem' }}>
-        <p>Curated for {profile.name}</p>
-        <button
-          onClick={() => { localStorage.removeItem('ark_profile'); setProfile(null); }}
-          style={{ marginTop: '1rem', color: 'red', background: 'transparent', fontSize: '0.7rem' }}
-        >
-          Reset Profile
-        </button>
+    <main className="container justify-start pt-8 pb-12">
+      <div className="w-full max-w-md flex justify-between items-center px-4 mb-4">
+        <div className="text-2xl font-serif font-bold tracking-tighter">ARK</div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-400"></div>
+          <div className="text-sm font-mono opacity-50 uppercase">{user.name || "Explorer"}</div>
+        </div>
       </div>
-    </div>
+
+      <CalendarLeaf quote={quote} dateStr={now} />
+    </main>
   );
 }

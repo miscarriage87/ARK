@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Preferences
+  name          String?
+  onboardingCompleted Boolean @default(false)
+  preferences   String?   // JSON string of UserPreferences
+  
+  // Relations
+  history       DailyView[]
+  ratings       Rating[]
+}
+
+model Quote {
+  id            String    @id @default(cuid())
+  content       String    // The actual quote text
+  author        String?
+  explanation   String?   // AI generated context/explanation
+  category      String    // e.g., "Spiritual", "Health", etc.
+  tags          String?   // JSON string array
+  
+  // Metadata
+  generatedAt   DateTime  @default(now())
+  sourceModel   String?   // e.g. "gpt-4o"
+  
+  // Relations
+  views         DailyView[]
+  ratings       Rating[]
+
+  @@index([category])
+}
+
+model DailyView {
+  id            String    @id @default(cuid())
+  userId        String
+  quoteId       String
+  viewedAt      DateTime  @default(now())
+  
+  date          String    // YYYY-MM-DD for uniqueness per user per day if needed
+  
+  user          User      @relation(fields: [userId], references: [id])
+  quote         Quote     @relation(fields: [quoteId], references: [id])
+
+  @@unique([userId, date]) // One quote per user per day? Or main quote.
+}
+
+model Rating {
+  id            String    @id @default(cuid())
+  userId        String
+  quoteId       String
+  score         Int       // 1 (Dislike) to 5 (Like), or simple 0/1
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id])
+  quote         Quote     @relation(fields: [quoteId], references: [id])
+}
