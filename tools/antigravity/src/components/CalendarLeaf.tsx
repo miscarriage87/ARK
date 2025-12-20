@@ -22,6 +22,33 @@ export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: 
     const month = new Date(dateStr).toLocaleDateString("de-DE", { month: "long" });
     const weekday = new Date(dateStr).toLocaleDateString("de-DE", { weekday: "long" });
 
+    const handleRate = async () => {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+            await fetch("/api/quote/rate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ quoteId: quote.id, score: 5 }),
+            });
+            alert("Danke! Das Zitat wurde gespeichert.");
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleShare = async () => {
+        if (navigator.share) {
+            navigator.share({
+                title: 'ARK',
+                text: `"${quote.content}" — ${quote.author}`,
+                url: window.location.href,
+            }).catch(err => console.log('Error sharing', err));
+        } else {
+            navigator.clipboard.writeText(`"${quote.content}" — ${quote.author}`);
+            alert("Zitat kopiert!");
+        }
+    };
+
     return (
         <div className={styles.container}>
 
@@ -44,8 +71,8 @@ export default function CalendarLeaf({ quote, dateStr }: { quote: any, dateStr: 
                 )}
 
                 <div className={styles.actions}>
-                    <button className={styles.actionBtn}><Heart size={18} /></button>
-                    <button className={styles.actionBtn}><Share2 size={18} /></button>
+                    <button onClick={handleRate} className={styles.actionBtn}><Heart size={18} /></button>
+                    <button onClick={handleShare} className={styles.actionBtn}><Share2 size={18} /></button>
                 </div>
             </div>
 
