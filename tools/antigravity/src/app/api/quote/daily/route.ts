@@ -51,6 +51,23 @@ export async function POST(req: NextRequest) {
                 name: body.name
             }
         });
+
+        // ERASE history for today to force new quote generation with new preferences
+        const today = new Date().toISOString().split("T")[0];
+        try {
+            await prisma.dailyView.delete({
+                where: {
+                    userId_date: {
+                        userId,
+                        date: today
+                    }
+                }
+            });
+            console.log(`[API] Cleared DailyView for user ${userId} to force regeneration.`);
+        } catch (e) {
+            // Ignore if not found
+        }
+
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ error: "Update failed" }, { status: 500 });
