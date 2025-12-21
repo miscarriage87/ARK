@@ -64,12 +64,27 @@ export async function getDailyQuote(userId: string) {
     if (openai) {
         console.log("[QuoteService] OpenAI Client Active. Attempting generation...");
         try {
-            // Get User Preferences
+            // Get User Preferences & Admin Config
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
+            let aiConfig = { temperature: 1.15, modeWeights: { quote: 60, question: 30, pulse: 10 }, customPrompt: "" };
 
-            // Randomly select mode: Quote (60%), Question (30%), Pulse (10%)
-            const modes = ["QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUOTE", "QUESTION", "QUESTION", "QUESTION", "PULSE"];
+            if (user?.aiConfig) {
+                try {
+                    const parsed = JSON.parse(user.aiConfig);
+                    aiConfig = { ...aiConfig, ...parsed };
+                    console.log(`[QuoteService] Using Admin Config for user ${userId}`, aiConfig);
+                } catch (e) { console.error("Invalid AI Config", e); }
+            }
+
+            // Weighted Random Mode Selection
+            const modes = [];
+            for (let i = 0; i < aiConfig.modeWeights.quote; i++) modes.push("QUOTE");
+            for (let i = 0; i < aiConfig.modeWeights.question; i++) modes.push("QUESTION");
+            for (let i = 0; i < aiConfig.modeWeights.pulse; i++) modes.push("PULSE");
+            // Fallback if weights are 0
+            if (modes.length === 0) modes.push("QUOTE");
+
             const mode = modes[Math.floor(Math.random() * modes.length)];
 
             const prompt = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau), der den Nutzer aufwecken und berühren will.
@@ -77,6 +92,9 @@ export async function getDailyQuote(userId: string) {
             
             Der Nutzer interessiert sich für: ${prefs.interests || "Leben, Liebe, Erfolg"}.
             Wähle ein Thema davon.
+
+            CUSTOM INSTRUCTIONS:
+            ${aiConfig.customPrompt || "Keine besonderen Anweisungen."}
 
             ANWEISUNGEN FÜR ${mode}:
             ${mode === "QUOTE" ? `
@@ -114,7 +132,7 @@ export async function getDailyQuote(userId: string) {
                     { role: "user", content: prompt }
                 ],
                 response_format: { type: "json_object" },
-                temperature: 1.15
+                temperature: aiConfig.temperature
             });
 
             const content = completion.choices[0].message.content;

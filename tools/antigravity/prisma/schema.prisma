@@ -15,6 +15,7 @@ model User {
   
   onboardingCompleted Boolean @default(false)
   preferences         String? // JSON string
+  aiConfig            String? // JSON string for Admin overrides { temp, weights, prompt }
   
   views     DailyView[]
   ratings   Rating[]
