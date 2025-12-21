@@ -5,7 +5,7 @@ This module handles all configuration settings using Pydantic BaseSettings,
 allowing for environment variable overrides and type validation.
 """
 
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, Field, validator
 from typing import List
 import os
 from pathlib import Path
@@ -40,6 +40,12 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000"],
         description="Allowed CORS origins"
     )
+    
+    @validator('CORS_ORIGINS', pre=True)
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',')]
+        return v
     
     # AI Service configuration
     OPENAI_API_KEY: str = Field(
