@@ -12,6 +12,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files from frontend/public
+app.use(express.static(path.join(__dirname, '../frontend/public')));
+
+// Serve the main app at root
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
+});
+
 // Sample quotes data
 const SAMPLE_QUOTES = [
     {
