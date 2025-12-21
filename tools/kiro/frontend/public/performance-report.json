@@ -1,0 +1,39 @@
+{
+  "buildTime": "2025-12-21T02:18:04.880Z",
+  "assets": {
+    "css": {
+      "critical": {
+        "size": 2768,
+        "sizeKB": "2.70"
+      },
+      "main": {
+        "size": 20716,
+        "sizeKB": "20.23"
+      }
+    },
+    "js": {
+      "app-BBb8LS9D.js": {
+        "size": 27099,
+        "sizeKB": "26.46"
+      },
+      "notifications-bKutmmeY.js": {
+        "size": 2446,
+        "sizeKB": "2.39"
+      },
+      "notifications-l0sNRNKZ.js": {
+        "size": 1,
+        "sizeKB": "0.00"
+      },
+      "sw-Cx21PtbG.js": {
+        "size": 5107,
+        "sizeKB": "4.99"
+      },
+      "vendor-l0sNRNKZ.js": {
+        "size": 1,
+        "sizeKB": "0.00"
+      }
+    }
+  },
+  "recommendations": [],
+  "performanceScore": 100
+}

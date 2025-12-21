@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ARK Digital Calendar - Personalized daily quotes and inspiration">
+    <meta name="theme-color" content="#007bff">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+    <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/icon-32x32.svg">
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/icon-16x16.svg">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.svg">
+    
+    <!-- Performance optimizations -->
+    <link rel="preconnect" href="http://localhost:8000">
+    <link rel="dns-prefetch" href="http://localhost:8000">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/css/main.css" as="style">
+    <link rel="modulepreload" href="/js/app.js">
+    
+    <!-- Stylesheets -->
+    <link rel="preload" href="/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+            <noscript><link rel="stylesheet" href="/css/main.css"></noscript>
+    
+    <!-- Critical CSS inlined for faster rendering -->
+    <style>:root{--bg-primary:#ffffff; --text-primary:#212529; --primary-color:#007bff; --gray-200:#dee2e6; --gray-800:#212529; --font-family-base:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; --font-size-base:1rem; --line-height-base:1.5; --spacing-sm:0.5rem; --spacing-md:1rem; --spacing-lg:1.5rem; --transition-fast:150ms ease-in-out; --z-tooltip:1070}[data-theme="dark"]{--bg-primary:#1a1a1a; --text-primary:#ffffff; --gray-200:#495057}*{box-sizing:border-box; margin:0; padding:0}body{font-family:var(--font-family-base); font-size:var(--font-size-base); line-height:var(--line-height-base); color:var(--text-primary); background-color:var(--bg-primary); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale}#app{min-height:100vh; display:flex; flex-direction:column}.main-content{flex:1; padding:var(--spacing-md)}.loading-screen{position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-primary); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:var(--z-tooltip)}.loading-spinner{width:40px; height:40px; border:3px solid var(--gray-200); border-top:3px solid var(--primary-color); border-radius:50%; animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.hidden{display:none !important}.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}.skip-link{position:absolute; top:-40px; left:6px; background:var(--primary-color); color:white; padding:8px; text-decoration:none; border-radius:4px; z-index:var(--z-tooltip)}.skip-link:focus{top:6px}.quote-container{max-width:600px; margin:0 auto; text-align:center; padding:var(--spacing-lg)}.quote-text{font-size:1.25rem; line-height:1.6; margin-bottom:var(--spacing-md); font-style:italic}.quote-author{font-size:1rem; color:var(--text-secondary,#6c757d); margin-bottom:var(--spacing-lg)}.app-header{background:var(--bg-primary); border-bottom:1px solid var(--gray-200); padding:var(--spacing-sm) var(--spacing-md)}.nav-brand h1{font-size:1.5rem; font-weight:700; color:var(--primary-color)}.bottom-nav{display:flex; background:var(--bg-primary); border-top:1px solid var(--gray-200); padding:var(--spacing-sm)}.nav-item{flex:1; display:flex; flex-direction:column; align-items:center; padding:var(--spacing-sm); background:none; border:none; color:var(--text-primary); text-decoration:none; transition:opacity var(--transition-fast)}.nav-item.active{color:var(--primary-color)}.nav-icon{font-size:1.25rem; margin-bottom:2px}.nav-label{font-size:0.75rem}@media (max-width:768px){.main-content{padding:var(--spacing-sm)}.quote-container{padding:var(--spacing-md)}.quote-text{font-size:1.125rem}}</style>
+    
+    <title>ARK Digital Calendar</title>
+</head>
+<body>
+    <!-- Skip link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- App Shell -->
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <nav class="nav-container">
+                <div class="nav-brand">
+                    <h1>ARK</h1>
+                </div>
+                <div class="nav-menu">
+                    <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <!-- Loading Screen -->
+            <div id="loading-screen" class="loading-screen">
+                <div class="loading-spinner"></div>
+                <p>Loading your daily inspiration...</p>
+            </div>
+
+            <!-- Daily Quote View -->
+            <section id="daily-quote" class="view daily-quote-view">
+                <div class="quote-container">
+                    <div class="quote-content">
+                        <blockquote id="quote-text" class="quote-text">
+                            <!-- Quote content will be loaded here -->
+                        </blockquote>
+                        <cite id="quote-author" class="quote-author">
+                            <!-- Author will be loaded here -->
+                        </cite>
+                    </div>
+                    
+                    <div class="quote-meta">
+                        <div id="quote-date" class="quote-date">
+                            <!-- Date will be loaded here -->
+                        </div>
+                        <div id="quote-theme" class="quote-theme">
+                            <!-- Theme will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Feedback Buttons -->
+                    <div class="feedback-container">
+                        <button id="feedback-dislike" class="feedback-btn feedback-dislike" aria-label="Dislike this quote">
+                            👎
+                        </button>
+                        <button id="feedback-neutral" class="feedback-btn feedback-neutral" aria-label="Neutral about this quote">
+                            😐
+                        </button>
+                        <button id="feedback-like" class="feedback-btn feedback-like" aria-label="Like this quote">
+                            👍
+                        </button>
+                    </div>
+                    
+                    <!-- Quote Actions -->
+                    <div class="quote-actions">
+                        <button id="share-quote" class="action-btn" aria-label="Share this quote">
+                            📤 Share
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Archive View -->
+            <section id="archive" class="view archive-view hidden">
+                <div class="archive-container">
+                    <div class="archive-header">
+                        <h2>Quote Archive</h2>
+                        <div class="search-container">
+                            <input type="search" id="archive-search" placeholder="Search quotes..." class="search-input">
+                            <button id="search-btn" class="search-btn" aria-label="Search">🔍</button>
+                        </div>
+                    </div>
+                    
+                    <div class="archive-filters">
+                        <select id="theme-filter" class="filter-select">
+                            <option value="">All Themes</option>
+                            <!-- Theme options will be populated dynamically -->
+                        </select>
+                        <select id="date-filter" class="filter-select">
+                            <option value="">All Dates</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="year">This Year</option>
+                        </select>
+                    </div>
+
+                    <div id="archive-list" class="archive-list">
+                        <!-- Archive items will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile Setup View -->
+            <section id="profile-setup" class="view profile-setup-view hidden">
+                <div class="profile-container">
+                    <div class="profile-header">
+                        <h2>Welcome to ARK</h2>
+                        <p>Let's personalize your daily inspiration</p>
+                    </div>
+
+                    <form id="questionnaire-form" class="questionnaire-form">
+                        <!-- Questionnaire questions will be loaded here -->
+                    </form>
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="settings" class="view settings-view hidden">
+                <div class="settings-container">
+                    <h2>Settings</h2>
+                    
+                    <div class="settings-section">
+                        <h3>Notifications</h3>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" id="notifications-enabled" class="setting-checkbox">
+                                Enable daily notifications
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                Notification time:
+                                <input type="time" id="notification-time" class="setting-input" value="09:00">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <button id="test-notification" class="btn btn-secondary" disabled>
+                                Send Test Notification
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Preferences</h3>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                Theme:
+                                <select id="app-theme" class="setting-select">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                Quote length preference:
+                                <select id="quote-length" class="setting-select">
+                                    <option value="short">Short</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="long">Long</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Data</h3>
+                        <button id="export-data" class="setting-button">Export My Data</button>
+                        <button id="sync-data" class="setting-button">Sync Data</button>
+                        <div id="sync-status" class="sync-status"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button id="nav-today" class="nav-item active" aria-label="Today's Quote">
+                <span class="nav-icon">📅</span>
+                <span class="nav-label">Today</span>
+            </button>
+            <button id="nav-archive" class="nav-item" aria-label="Quote Archive">
+                <span class="nav-icon">📚</span>
+                <span class="nav-label">Archive</span>
+            </button>
+            <button id="nav-settings" class="nav-item" aria-label="Settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner hidden">
+        <p>You're offline. Some features may be limited.</p>
+        <button id="dismiss-offline" class="dismiss-btn">×</button>
+    </div>
+
+    <!-- Install Prompt -->
+    <div id="install-prompt" class="install-prompt hidden">
+        <div class="install-content">
+            <h3>Install ARK</h3>
+            <p>Add ARK to your home screen for the best experience</p>
+            <div class="install-actions">
+                <button id="install-app" class="install-btn primary">Install</button>
+                <button id="dismiss-install" class="install-btn secondary">Not now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts - Use ES modules for better performance -->
+    <script type="module" src="/js/app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

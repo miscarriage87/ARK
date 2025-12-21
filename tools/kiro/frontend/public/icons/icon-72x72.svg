@@ -1,0 +1,8 @@
+<svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <rect width="72" height="72" fill="#007bff" rx="7.2"/>
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="28.8" 
+        font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">
+    ARK
+  </text>
+  <circle cx="57.6" cy="14.4" r="3.6" fill="white" opacity="0.8"/>
+</svg>

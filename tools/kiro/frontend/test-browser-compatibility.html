@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK - Browser Compatibility Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-header {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .test-passed {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .test-failed {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .test-running {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .summary {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #28a745;
+            transition: width 0.3s ease;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .browser-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧪 ARK Digital Calendar - Browser Compatibility Test</h1>
+        <p>This test validates browser compatibility and PWA features for the ARK Digital Calendar application.</p>
+        <button id="runTests" onclick="runCompatibilityTests()">Run Compatibility Tests</button>
+    </div>
+
+    <div class="browser-info" id="browserInfo">
+        <strong>Browser Information:</strong><br>
+        <span id="userAgent"></span><br>
+        <span id="platform"></span><br>
+        <span id="viewport"></span>
+    </div>
+
+    <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+    </div>
+
+    <div id="testResults"></div>
+
+    <div class="summary" id="summary" style="display: none;">
+        <h3>📊 Test Summary</h3>
+        <div id="summaryContent"></div>
+    </div>
+
+    <script src="src/js/test-e2e-browser.js"></script>
+    <script>
+        // Initialize browser info display
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('userAgent').textContent = `User Agent: ${navigator.userAgent}`;
+            document.getElementById('platform').textContent = `Platform: ${navigator.platform} | Language: ${navigator.language}`;
+            document.getElementById('viewport').textContent = `Viewport: ${window.innerWidth}x${window.innerHeight} | Device Pixel Ratio: ${window.devicePixelRatio}`;
+        });
+
+        let testRunner = null;
+        let currentTestIndex = 0;
+        let totalTests = 10;
+
+        async function runCompatibilityTests() {
+            const button = document.getElementById('runTests');
+            const resultsDiv = document.getElementById('testResults');
+            const summaryDiv = document.getElementById('summary');
+            const progressBar = document.getElementById('progressBar');
+
+            // Reset UI
+            button.disabled = true;
+            button.textContent = 'Running Tests...';
+            resultsDiv.innerHTML = '';
+            summaryDiv.style.display = 'none';
+            progressBar.style.width = '0%';
+            currentTestIndex = 0;
+
+            // Create test runner with custom result handler
+            testRunner = new BrowserCompatibilityTester();
+            
+            // Override recordTestResult to update UI in real-time
+            const originalRecordResult = testRunner.recordTestResult.bind(testRunner);
+            testRunner.recordTestResult = function(testName, passed, details) {
+                originalRecordResult(testName, passed, details);
+                updateTestUI(testName, passed, details);
+                currentTestIndex++;
+                updateProgress();
+            };
+
+            try {
+                const success = await testRunner.runAllTests();
+                showSummary(success);
+            } catch (error) {
+                console.error('Test execution error:', error);
+                addTestResult('Test Execution', false, `Error: ${error.message}`);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run Tests Again';
+            }
+        }
+
+        function updateTestUI(testName, passed, details) {
+            const resultsDiv = document.getElementById('testResults');
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-result ${passed ? 'test-passed' : 'test-failed'}`;
+            
+            const status = passed ? '✅' : '❌';
+            testDiv.innerHTML = `
+                <strong>${status} ${testName}</strong><br>
+                <small>${details}</small>
+            `;
+            
+            resultsDiv.appendChild(testDiv);
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const percentage = (currentTestIndex / totalTests) * 100;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        function showSummary(success) {
+            const summaryDiv = document.getElementById('summary');
+            const summaryContent = document.getElementById('summaryContent');
+            
+            const results = testRunner.testResults;
+            const passed = results.filter(r => r.passed).length;
+            const total = results.length;
+            const percentage = Math.round((passed / total) * 100);
+
+            summaryContent.innerHTML = `
+                <p><strong>Overall Results:</strong> ${passed}/${total} tests passed (${percentage}%)</p>
+                ${success ? 
+                    '<p style="color: #28a745;">🎉 All compatibility tests PASSED! Browser is fully compatible with ARK Digital Calendar.</p>' :
+                    '<p style="color: #dc3545;">⚠️ Some compatibility issues detected. Review failed tests above.</p>'
+                }
+                <p><strong>Tested Features:</strong></p>
+                <ul>
+                    ${results.map(r => `<li>${r.test}: ${r.passed ? '✅' : '❌'}</li>`).join('')}
+                </ul>
+                <p><strong>Browser Capabilities:</strong></p>
+                <ul>
+                    <li>PWA Support: ${('serviceWorker' in navigator) ? '✅' : '❌'}</li>
+                    <li>Offline Storage: ${('caches' in window) ? '✅' : '❌'}</li>
+                    <li>Push Notifications: ${('PushManager' in window) ? '✅' : '❌'}</li>
+                    <li>Touch Support: ${('ontouchstart' in window) ? '✅' : '❌'}</li>
+                    <li>Local Storage: ${(typeof Storage !== 'undefined') ? '✅' : '❌'}</li>
+                </ul>
+            `;
+            
+            summaryDiv.style.display = 'block';
+
+            // Export results for debugging
+            if (typeof localStorage !== 'undefined') {
+                const exportData = testRunner.exportResults();
+                localStorage.setItem('ark-compatibility-test-results', JSON.stringify(exportData));
+                console.log('Test results exported to localStorage:', exportData);
+            }
+        }
+
+        // Auto-run tests if URL parameter is present
+        if (window.location.search.includes('autorun=true')) {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(runCompatibilityTests, 1000);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "name": "ark-digital-calendar-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Progressive Web App frontend for ARK Digital Calendar",
+  "main": "src/js/app.js",
+  "scripts": {
+    "dev": "http-server public -p 3000 -c-1 --cors",
+    "build": "npm run build:css && npm run build:js",
+    "build:optimized": "node scripts/build-optimized.js",
+    "build:css": "postcss src/css/main.css -o public/css/main.css",
+    "build:js": "rollup -c rollup.config.js",
+    "build:js:optimized": "rollup -c rollup.config.js --environment BUILD:optimized",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/js/**/*.js",
+    "lint:fix": "eslint src/js/**/*.js --fix",
+    "serve": "http-server public -p 3000",
+    "start": "npm run serve",
+    "analyze": "npm run build:optimized && npx rollup-plugin-visualizer public/js/stats.html",
+    "lighthouse": "lighthouse http://localhost:3000 --output=json --output-path=public/lighthouse-report.json --chrome-flags='--headless'"
+  },
+  "keywords": [
+    "pwa",
+    "progressive-web-app",
+    "digital-calendar",
+    "quotes",
+    "personalization"
+  ],
+  "author": "ARK Development Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "fast-check": "^3.15.0",
+    "http-server": "^14.1.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "postcss": "^8.4.32",
+    "postcss-cli": "^11.0.0",
+    "rollup": "^4.6.1"
+  },
+  "dependencies": {
+    "idb": "^7.1.1",
+    "workbox-sw": "^7.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/src/js/test-setup.js"],
+    "collectCoverageFrom": [
+      "src/js/**/*.js",
+      "!src/js/test-setup.js",
+      "!src/js/**/*.test.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "jest": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "warn"
+    }
+  }
+}

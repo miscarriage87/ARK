@@ -1,6 +1,6 @@
 # 📅 ARK - Digitaler Abreißkalender
 
-> *Ein personalisierter, KI-gestützter Abreißkalender als moderne Web-Anwendung*
+> *Ein personalisierter, KI-gestützter Abreißkalender als moderne Web-Anwendung in deutscher(!) Sprache*
 
 ---
 
@@ -97,7 +97,7 @@ Jedes Tool kann seinen eigenen Tech-Stack wählen:
 
 ---
 
-## � **EFntwicklungsregeln**
+## � **Entwicklungsregeln**
 
 Alle Entwicklungsregeln und Workflows sind in [`agents.md`](agents.md) definiert.
 
