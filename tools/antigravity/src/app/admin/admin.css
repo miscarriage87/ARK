@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Force dark mode background for admin to override global if needed */
+.admin-root {
+    background-color: #000;
+    color: #fff;
+    min-height: 100vh;
+}
