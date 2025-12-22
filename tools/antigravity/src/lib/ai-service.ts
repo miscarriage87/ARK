@@ -51,9 +51,11 @@ export async function getDailyQuote(userId: string) {
 
     if (history) {
         console.log(`[QuoteService] History found for user ${userId}. Returning cached quote.`);
+        const rating = await prisma.rating.findFirst({ where: { userId, quoteId: history.quoteId } });
         return {
             ...history.quote,
-            isNew: false
+            isNew: false,
+            isLiked: !!rating
         };
     }
 
@@ -174,14 +176,21 @@ export async function getDailyQuote(userId: string) {
         }
     });
 
-    // 4. Record View
-    await prisma.dailyView.create({
-        data: {
-            userId,
-            quoteId: quote.id,
-            date: today
-        }
+    // 4. Record View (if new)
+    if (!history) {
+        await prisma.dailyView.create({
+            data: {
+                userId,
+                quoteId: quote.id,
+                date: today
+            }
+        });
+    }
+
+    // Check if liked
+    const rating = await prisma.rating.findFirst({
+        where: { userId, quoteId: quote.id }
     });
 
-    return { ...quote, isNew: true };
+    return { ...quote, isNew: !history, isLiked: !!rating };
 }

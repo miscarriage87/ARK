@@ -8,6 +8,7 @@ import ConceptOverlay from "./ConceptOverlay";
 export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, dateStr: string, userId?: string }) {
     const [revealed, setRevealed] = useState(false);
     const [activeConcept, setActiveConcept] = useState<{ word: string, definition: string } | null>(null);
+    const [liked, setLiked] = useState(quote.isLiked || false);
 
     const y = useMotionValue(0);
     const rotate = useTransform(y, [0, 300], [0, 15]);
@@ -25,6 +26,8 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
     const weekday = new Date(dateStr).toLocaleDateString("de-DE", { weekday: "long" });
 
     const handleRate = async () => {
+        if (liked) return; // Prevent double click
+        setLiked(true); // Optimistic UI
         try {
             if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
             await fetch("/api/quote/rate", {
@@ -32,9 +35,10 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ quoteId: quote.id, score: 5 }),
             });
-            alert("Danke! Das Zitat wurde gespeichert.");
+            // alert("Danke! Das Zitat wurde gespeichert."); // Removed alert for smoother UX
         } catch (e) {
             console.error(e);
+            setLiked(false); // Revert on error
         }
     };
 
@@ -153,7 +157,9 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
                 </div>
 
                 <div className={styles.actions}>
-                    <button onClick={handleRate} className={styles.actionBtn}><Heart size={18} /></button>
+                    <button onClick={handleRate} className={styles.actionBtn}>
+                        <Heart size={18} fill={liked ? "currentColor" : "none"} className={liked ? "text-red-500" : ""} />
+                    </button>
                     <button onClick={handleShare} className={styles.actionBtn}><Share2 size={18} /></button>
                 </div>
             </div>

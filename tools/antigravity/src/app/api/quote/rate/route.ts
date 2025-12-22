@@ -10,6 +10,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
         }
 
+        const existingRating = await prisma.rating.findFirst({
+            where: { userId, quoteId }
+        });
+
+        if (existingRating) {
+            // Already rated. Optionally update score? For now, just return success (idempotent).
+            // The user just wants to prevent duplicates.
+            return NextResponse.json({ success: true, alreadyRated: true });
+        }
+
         await prisma.rating.create({
             data: {
                 userId,
