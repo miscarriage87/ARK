@@ -196,7 +196,7 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                     <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
                         <h3 className="text-xl font-bold mb-4">Custom Instructions (Inject)</h3>
                         <textarea
-                            className="w-full h-32 font-mono text-sm leading-relaxed"
+                            className="h-32 font-mono text-sm leading-relaxed"
                             value={config.customPrompt}
                             onChange={e => setConfig({ ...config, customPrompt: e.target.value })}
                         />
