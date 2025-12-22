@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+import { cookies } from "next/headers";
+
 export async function POST(req: NextRequest) {
     try {
         const { quoteId, score } = await req.json();
-        const userId = req.headers.get("x-user-id");
+        const cookieStore = await cookies();
+        const userId = req.headers.get("x-user-id") || cookieStore.get("ark_user_id")?.value;
 
         if (!userId || !quoteId || score === undefined) {
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
