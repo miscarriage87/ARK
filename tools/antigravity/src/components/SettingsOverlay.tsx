@@ -38,9 +38,16 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
     }, [user]);
 
     const toggleInterest = (interest: string) => {
-        setSelections(prev =>
-            prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
-        );
+        setSelections(prev => {
+            if (prev.includes(interest)) {
+                return prev.filter(i => i !== interest);
+            }
+            if (prev.length >= 3) {
+                alert("Maximal 3 Interessen wählbar.");
+                return prev;
+            }
+            return [...prev, interest];
+        });
     };
 
     const save = async () => {

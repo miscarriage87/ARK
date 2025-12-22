@@ -102,19 +102,8 @@ export async function POST(req: NextRequest) {
             sameSite: 'strict'
         });
 
-        // ERASE history for today to force new quote generation
-        const today = new Date().toISOString().split("T")[0];
-        try {
-            await prisma.dailyView.delete({
-                where: {
-                    userId_date: {
-                        userId: userId!,
-                        date: today
-                    }
-                }
-            });
-            console.log(`[API] Cleared DailyView for user ${userId} to force regeneration.`);
-        } catch (e) { }
+        // REMOVED: Do not erase history. User keeps today's quote even if preferences change.
+        // The new preferences will apply tomorrow.
 
         return NextResponse.json({ success: true, userId });
     } catch (e) {
