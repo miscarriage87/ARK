@@ -134,9 +134,9 @@ Output JSON:
             let masterPrompt = aiConfig.masterPrompt || DEFAULT_MASTER_PROMPT;
 
             // Variable Substitution
-            masterPrompt = masterPrompt.replace("{{MODE}}", mode);
-            masterPrompt = masterPrompt.replace("{{INTERESTS}}", prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
-            masterPrompt = masterPrompt.replace("{{MODE_INSTRUCTIONS}}", MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
+            masterPrompt = masterPrompt.replace(/{{MODE}}/g, mode);
+            masterPrompt = masterPrompt.replace(/{{INTERESTS}}/g, prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
+            masterPrompt = masterPrompt.replace(/{{MODE_INSTRUCTIONS}}/g, MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",

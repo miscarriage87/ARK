@@ -68,9 +68,9 @@ Output JSON:
     let promptText = aiConfig.masterPrompt || DEFAULT_MASTER_PROMPT;
 
     // Substitution for Preview
-    promptText = promptText.replace("{{MODE}}", mode);
-    promptText = promptText.replace("{{INTERESTS}}", prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
-    promptText = promptText.replace("{{MODE_INSTRUCTIONS}}", MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
+    promptText = promptText.replace(/{{MODE}}/g, mode);
+    promptText = promptText.replace(/{{INTERESTS}}/g, prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
+    promptText = promptText.replace(/{{MODE_INSTRUCTIONS}}/g, MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
 
     return NextResponse.json({ prompt: promptText });
 }

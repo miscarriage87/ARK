@@ -136,106 +136,137 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
             <p className="text-gray-600 mb-10 font-mono text-xs uppercase tracking-widest">{userId}</p>
 
             {activeTab === "config" ? (
-                <div className="grid gap-8">
-                    {/* Prompt Preview */}
-                    <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
-                        <h3 className="text-lg font-bold mb-4 text-purple-400 uppercase tracking-wider text-xs">Generated Prompt Preview</h3>
-                        <div className="bg-black/80 p-4 rounded-lg font-mono text-xs text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto border border-gray-700/50 shadow-inner">
-                            {promptPreview}
+                <div className="grid gap-12">
+
+                    {/* 1. INTERESSEN */}
+                    <div className="bg-gray-900/40 p-8 rounded-3xl border border-gray-800 backdrop-blur-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl text-purple-500 pointer-events-none select-none">1</div>
+                        <h3 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-full bg-purple-500 text-black flex items-center justify-center text-sm font-bold">1</span>
+                            Interessen
+                        </h3>
+                        <div className="flex flex-wrap gap-3">
+                            {INTERESTS_LIST.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => !isSafe && toggleInterest(tag)}
+                                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-300
+                                        ${interests.includes(tag)
+                                            ? 'bg-purple-600 text-white border-purple-500 shadow-lg shadow-purple-500/20 scale-105'
+                                            : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-gray-500 hover:bg-gray-800 hover:text-white'}
+                                        ${isSafe ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer'}
+                                    `}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
                         </div>
+                        <p className="text-sm text-gray-500 mt-4 ml-1">Wähle die Themenbereiche, die du priorisieren möchtest (Empfehlung: max 3).</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8">
-                        {/* Interests */}
-                        <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
-                            <h3 className="text-lg font-bold mb-4 text-purple-400 uppercase tracking-wider text-xs">Interessen</h3>
-                            <div className="flex flex-wrap gap-3">
-                                {INTERESTS_LIST.map(tag => (
-                                    <button
-                                        key={tag}
-                                        onClick={() => !isSafe && toggleInterest(tag)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200
-                                            ${interests.includes(tag)
-                                                ? 'bg-purple-600 text-white border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-                                                : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-gray-500 hover:bg-gray-800'}
-                                            ${isSafe ? 'cursor-not-allowed opacity-50' : 'cursor-pointer transform hover:-translate-y-0.5'}
-                                        `}
-                                    >
-                                        {tag}
-                                    </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* 2. GEWICHTUNG */}
+                        <div className="bg-gray-900 p-8 rounded-3xl border border-gray-800 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl text-blue-500 pointer-events-none select-none">2</div>
+                            <h3 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-blue-500 text-black flex items-center justify-center text-sm font-bold">2</span>
+                                Modus Gewichtung
+                            </h3>
+                            <div className="space-y-4">
+                                {[
+                                    { id: 'quote', label: 'Quote', color: 'text-blue-400' },
+                                    { id: 'question', label: 'Question', color: 'text-pink-400' },
+                                    { id: 'pulse', label: 'Pulse', color: 'text-green-400' }
+                                ].map(mode => (
+                                    <div key={mode.id} className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-gray-800">
+                                        <label className={`font-bold ${mode.color}`}>{mode.label}</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                disabled={isSafe}
+                                                className={`bg-transparent text-right w-16 focus:outline-none font-mono text-lg font-bold ${isSafe ? 'text-gray-600' : 'text-white'}`}
+                                                value={config.modeWeights[mode.id as keyof typeof config.modeWeights]}
+                                                onChange={e => setConfig({ ...config, modeWeights: { ...config.modeWeights, [mode.id]: parseInt(e.target.value) || 0 } })}
+                                            />
+                                            <span className="text-gray-600">%</span>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
-                            <p className="text-xs text-gray-500 mt-4 font-mono">Maximal 3 auswählen für beste Ergebnisse.</p>
-                        </div>
-
-                        {/* Weights */}
-                        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-                            <h3 className="text-xl font-bold mb-4">Modus Gewichtung</h3>
-                            <div className="grid gap-4">
-                                <div className="flex justify-between items-center bg-black/50 p-2 rounded">
-                                    <label>Quote</label>
-                                    <input type="number" className="bg-transparent text-right w-16 focus:outline-none font-mono" value={config.modeWeights.quote} onChange={e => setConfig({ ...config, modeWeights: { ...config.modeWeights, quote: parseInt(e.target.value) } })} />
-                                </div>
-                                <div className="flex justify-between items-center bg-black/50 p-2 rounded">
-                                    <label>Question</label>
-                                    <input type="number" className="bg-transparent text-right w-16 focus:outline-none font-mono" value={config.modeWeights.question} onChange={e => setConfig({ ...config, modeWeights: { ...config.modeWeights, question: parseInt(e.target.value) } })} />
-                                </div>
-                                <div className="flex justify-between items-center bg-black/50 p-2 rounded">
-                                    <label>Pulse</label>
-                                    <input type="number" className="bg-transparent text-right w-16 focus:outline-none font-mono" value={config.modeWeights.pulse} onChange={e => setConfig({ ...config, modeWeights: { ...config.modeWeights, pulse: parseInt(e.target.value) } })} />
-                                </div>
+                            <div className={`mt-4 text-right font-mono text-sm ${totalWeight !== 100 ? 'text-red-400 animate-pulse' : 'text-green-500'}`}>
+                                Total: {totalWeight}%
                             </div>
-                            <div className={`mt-2 text-right text-xs ${totalWeight !== 100 ? 'text-red-400' : 'text-green-400'}`}>Total: {totalWeight}%</div>
+                        </div>
+
+                        {/* 3. TEMPERATUR */}
+                        <div className="bg-gray-900 p-8 rounded-3xl border border-gray-800 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl text-orange-500 pointer-events-none select-none">3</div>
+                            <h3 className="text-2xl font-bold mb-2 text-white flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-orange-500 text-black flex items-center justify-center text-sm font-bold">3</span>
+                                Kreativität (Temp)
+                            </h3>
+                            <p className="text-gray-500 text-sm mb-8 h-10">
+                                Bestimmt wie "kreativ" (aber auch risiko-freudig) die KI agiert.
+                                <br />Niedrig = Konservativ, Hoch = Abstrakt.
+                            </p>
+
+                            <div className="flex items-center gap-4 mb-4">
+                                <span className="text-2xl font-mono font-bold text-orange-400">{config.temperature.toFixed(2)}</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.05"
+                                disabled={isSafe}
+                                value={config.temperature}
+                                onChange={e => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
+                                className={`w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer ${isSafe ? 'opacity-50' : ''}`}
+                            />
+                            <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono uppercase">
+                                <span>Präzise (0.0)</span>
+                                <span>Standard (1.0)</span>
+                                <span>Chaos (2.0)</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Temperature */}
-                    <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-                        <h3 className="text-xl font-bold mb-4">Temperatur: {config.temperature}</h3>
-                        <input type="range" min="0" max="2" step="0.05" value={config.temperature} onChange={e => setConfig({ ...config, temperature: parseFloat(e.target.value) })} className="w-full accent-green-500" />
-                    </div>
-
-                    {/* Custom Prompt (Master Template) */}
-                    <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Master Prompt Template</h3>
-                            <button
-                                onClick={() => setIsSafe(!isSafe)}
-                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all
-                                ${isSafe ? 'bg-green-500/10 text-green-400 border border-green-500/50' : 'bg-red-500/10 text-red-400 border border-red-500/50 animate-pulse'}`}
-                            >
-                                {isSafe ? <Lock size={14} /> : <Unlock size={14} />}
-                                {isSafe ? "Locked" : "Unlocked"}
-                            </button>
+                    {/* 4. MASTER PROMPT */}
+                    <div className="bg-black/40 p-8 rounded-3xl border border-gray-800 relative group">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-bold">4</span>
+                                Master Prompt
+                            </h3>
+                            <div className="flex gap-2">
+                                <span className="px-2 py-1 bg-gray-900 rounded text-xs text-purple-400 border border-purple-500/30">{"{{INTERESTS}}"}</span>
+                                <span className="px-2 py-1 bg-gray-900 rounded text-xs text-blue-400 border border-blue-500/30">{"{{MODE}}"}</span>
+                            </div>
                         </div>
 
-                        <div className="relative group">
-                            <div className={`absolute inset-0 bg-red-500/5 rounded-lg border-2 border-red-500/20 pointer-events-none transition-opacity duration-300 ${isSafe ? 'opacity-0' : 'opacity-100'}`} />
-
+                        <div className="relative">
+                            <div className={`absolute inset-0 bg-red-500/5 z-10 rounded-xl border-2 border-red-500/10 pointer-events-none transition-all duration-500 ${isSafe ? 'opacity-100' : 'opacity-0 scale-105'}`} />
                             <textarea
-                                className={`w-full h-96 font-mono text-xs leading-relaxed p-4 rounded-lg bg-black/50 border transition-all duration-300
-                                ${isSafe ? 'text-gray-500 border-gray-800 cursor-not-allowed' : 'text-gray-200 border-red-500/30 focus:border-red-500 focus:ring-1 focus:ring-red-500/20'}
-                            `}
+                                className={`w-full h-[500px] font-mono text-sm leading-relaxed p-6 rounded-xl bg-black border transition-all duration-300 resize-none
+                                    ${isSafe ? 'text-gray-600 border-gray-800' : 'text-gray-200 border-gray-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50'}
+                                `}
                                 value={config.masterPrompt || ""}
                                 onChange={e => setConfig({ ...config, masterPrompt: e.target.value })}
                                 disabled={isSafe}
-                                placeholder="Standard Template wird verwendet..."
+                                spellCheck={false}
                             />
                         </div>
+                    </div>
 
-                        <div className="mt-4 flex gap-4 text-xs font-mono text-gray-500">
-                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{INTERESTS}}"}</span>
-                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{MODE}}"}</span>
-                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{MODE_INSTRUCTIONS}}"}</span>
+                    {/* 5. PREVIEW */}
+                    <div className="bg-gray-900/60 p-8 rounded-3xl border border-gray-700/50 backdrop-blur-xl">
+                        <h3 className="text-xl font-bold mb-4 text-gray-400 uppercase tracking-widest text-xs flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            Live Preview Result
+                        </h3>
+                        <div className="bg-black p-6 rounded-xl font-mono text-xs text-green-400/90 whitespace-pre-wrap max-h-96 overflow-y-auto border border-white/10 shadow-inner">
+                            {promptPreview}
                         </div>
-                    </div>    <div className="sticky bottom-8 bg-black/90 backdrop-blur border border-gray-800 p-4 rounded-xl flex items-center justify-between shadow-2xl">
-                        <button onClick={() => setIsSafe(!isSafe)} className={`flex items-center gap-2 ${isSafe ? 'text-green-500' : 'text-red-500'}`}>
-                            {isSafe ? <Lock /> : <Unlock />}
-                            <span className="text-xs uppercase font-bold tracking-wider">{isSafe ? "Locked" : "Editing"}</span>
-                        </button>
-                        <button disabled={isSafe} onClick={handleSave} className={`px-8 py-3 rounded bg-white text-black font-bold ${isSafe ? 'opacity-20 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
-                            {saving ? "Saving..." : "Save Changes"}
-                        </button>
                     </div>
                 </div>
             ) : (
@@ -265,6 +296,19 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Sticky Save Bar (only in config mode) */}
+            {activeTab === "config" && (
+                <div className="sticky bottom-8 bg-black/90 backdrop-blur border border-gray-800 p-4 rounded-xl flex items-center justify-between shadow-2xl mt-8">
+                    <button onClick={() => setIsSafe(!isSafe)} className={`flex items-center gap-2 ${isSafe ? 'text-green-500' : 'text-red-500'}`}>
+                        {isSafe ? <Lock /> : <Unlock />}
+                        <span className="text-xs uppercase font-bold tracking-wider">{isSafe ? "Locked" : "Editing"}</span>
+                    </button>
+                    <button disabled={isSafe} onClick={handleSave} className={`px-8 py-3 rounded bg-white text-black font-bold ${isSafe ? 'opacity-20 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
+                        {saving ? "Saving..." : "Save Changes"}
+                    </button>
                 </div>
             )}
         </main>
