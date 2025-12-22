@@ -21,13 +21,38 @@ const DEFAULT_CONFIG: AiConfig = {
     masterPrompt: ""
 };
 
+// Default Master Prompt Template (Synced with AI Service)
+const DEFAULT_MASTER_PROMPT = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau).
+Das heutige Format ist: {{MODE}}.
+
+Der Nutzer interessiert sich für: {{INTERESTS}}.
+Wähle ein Thema davon.
+
+ANWEISUNGEN FÜR {{MODE}}:
+{{MODE_INSTRUCTIONS}}
+
+ANALYSE (für alle Formate):
+- Analysiere den Text auf schwierige/spannende Begriffe (Fremdwörter, Konzepte).
+- Identifiziere 1-3 Begriff, die IM TEXT vorkommen.
+- Falls der Text einfach ist, lass "concepts" leer.
+
+Output JSON:
+{
+  "content": "Text des Zitats/Frage/Impuls",
+  "author": "Name oder 'Reflexion'/'Impuls'",
+  "explanation": "Kurze Deutung oder Coaching-Hinweis dazu (2-3 Sätze).",
+  "category": "Kategorie (Ein Wort)",
+  "concepts": [ { "word": "Begriff", "definition": "Erklärung" } ] 
+}`;
+
 const INTERESTS_LIST = ["Stoizismus", "Achtsamkeit", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
 
 export default function UserAdminPage({ params }: { params: Promise<{ id: string }> }) {
     const [user, setUser] = useState<any>(null);
     const [config, setConfig] = useState<AiConfig>(DEFAULT_CONFIG);
     const [interests, setInterests] = useState<string[]>([]);
-    const [promptPreview, setPromptPreview] = useState("");
+
+    // Preview Removed
 
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"config" | "database">("config");
@@ -52,16 +77,21 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
 
         // Parse Config
         if (data.aiConfig) {
-            try { setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(data.aiConfig) }); } catch (e) { }
+            try {
+                const parsed = JSON.parse(data.aiConfig);
+                // Ensure masterPrompt has a value (Default Template) if empty
+                if (!parsed.masterPrompt) parsed.masterPrompt = DEFAULT_MASTER_PROMPT;
+                setConfig({ ...DEFAULT_CONFIG, ...parsed });
+            } catch (e) { }
+        } else {
+            // No config yet, set default template
+            setConfig(prev => ({ ...prev, masterPrompt: DEFAULT_MASTER_PROMPT }));
         }
 
         // Parse Interests
         if (data.preferences) {
             try { setInterests(JSON.parse(data.preferences).interests || []); } catch (e) { }
         }
-
-        // Fetch Prompt Preview
-        fetch(`/api/admin/user/${id}/preview-prompt`).then(r => r.json()).then(d => setPromptPreview(d.prompt || ""));
 
         setLoading(false);
     };
@@ -74,14 +104,9 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
             const preferences = user.preferences ? JSON.parse(user.preferences) : {};
             preferences.interests = interests;
 
-            // First call matches original PUT (aiConfig only) - keeping for safety/backward compat
-            await fetch(`/api/admin/user/${userId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ aiConfig: JSON.stringify(config) })
-            });
+            // Ensure we save the prompt even if it matches default, or handle clearing?
+            // User wants to see the template. We save what is in the box.
 
-            // Second call with updated structure (including preferences)
             await fetch(`/api/admin/user/${userId}`, {
                 method: 'PUT',
                 headers: { "Content-Type": "application/json" },
@@ -93,8 +118,6 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
 
             alert("Gespeichert!");
             setIsSafe(true);
-            // Refresh preview
-            fetch(`/api/admin/user/${userId}/preview-prompt`).then(r => r.json()).then(d => setPromptPreview(d.prompt));
 
         } catch (e) {
             alert("Fehler");
@@ -103,7 +126,15 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
     };
 
     const toggleInterest = (i: string) => {
-        setInterests(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
+        if (interests.includes(i)) {
+            setInterests(prev => prev.filter(x => x !== i));
+        } else {
+            if (interests.length >= 3) {
+                alert("Maximal 3 Interessen erlaubt!");
+                return;
+            }
+            setInterests(prev => [...prev, i]);
+        }
     };
 
     if (loading) return <div className="p-8 text-white">Lade...</div>;
@@ -258,16 +289,7 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                         </div>
                     </div>
 
-                    {/* 5. PREVIEW */}
-                    <div className="bg-gray-900/60 p-8 rounded-3xl border border-gray-700/50 backdrop-blur-xl">
-                        <h3 className="text-xl font-bold mb-4 text-gray-400 uppercase tracking-widest text-xs flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            Live Preview Result
-                        </h3>
-                        <div className="bg-black p-6 rounded-xl font-mono text-xs text-green-400/90 whitespace-pre-wrap max-h-96 overflow-y-auto border border-white/10 shadow-inner">
-                            {promptPreview}
-                        </div>
-                    </div>
+
                 </div>
             ) : (
                 <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
