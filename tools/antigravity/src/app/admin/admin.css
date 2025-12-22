@@ -2,8 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Force dark mode background for admin to override global if needed */
-.admin-root {
+@layer base {
+    .admin-scope * {
+        border-width: 0;
+        border-style: solid;
+        border-color: #374151;
+        /* gray-700 default */
+        box-sizing: border-box;
+    }
+
+    .admin-scope button {
+        cursor: pointer;
+        background-color: transparent;
+    }
+
+    .admin-scope input,
+    .admin-scope textarea,
+    .admin-scope select {
+        background-color: transparent;
+        color: inherit;
+    }
+}
+
+.admin-scope {
     background-color: #000;
     color: #fff;
     min-height: 100vh;
