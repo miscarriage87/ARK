@@ -7,25 +7,75 @@
         border-width: 0;
         border-style: solid;
         border-color: #374151;
-        /* gray-700 default */
+        /* gray-700 */
         box-sizing: border-box;
     }
 
+    /* Buttons */
     .admin-scope button {
         cursor: pointer;
         background-color: transparent;
     }
 
-    .admin-scope input,
+    /* Form Elements Defaults */
+    .admin-scope input[type="text"],
+    .admin-scope input[type="number"],
     .admin-scope textarea,
     .admin-scope select {
-        background-color: transparent;
-        color: inherit;
+        background-color: rgba(30, 30, 30, 0.5);
+        color: #fff;
+        border-width: 1px;
+        border-radius: 0.375rem;
+        /* rounded-md */
+        padding: 0.5rem;
+        outline: none;
+        font-family: monospace;
+        transition: all 0.2s;
+    }
+
+    .admin-scope input:focus,
+    .admin-scope textarea:focus,
+    .admin-scope select:focus {
+        border-color: #a855f7;
+        /* purple-500 */
+        background-color: rgba(30, 30, 30, 0.8);
+        box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+    }
+
+    /* Range Slider */
+    .admin-scope input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        background: #4b5563;
+        /* gray-600 */
+        border-radius: 5px;
+        outline: none;
+        border-width: 0;
+        cursor: pointer;
+    }
+
+    .admin-scope input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #22c55e;
+        /* green-500 */
+        cursor: pointer;
+        transition: transform .1s ease-in-out;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .admin-scope input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
     }
 }
 
 .admin-scope {
-    background-color: #000;
-    color: #fff;
+    background-color: #050505;
+    color: #e5e5e5;
     min-height: 100vh;
+    font-family: ui-sans-serif, system-ui, sans-serif;
 }
