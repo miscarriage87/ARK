@@ -11,12 +11,14 @@ interface AiConfig {
         pulse: number;
     };
     customPrompt: string;
+    masterPrompt?: string;
 }
 
 const DEFAULT_CONFIG: AiConfig = {
     temperature: 1.15,
     modeWeights: { quote: 60, question: 30, pulse: 10 },
-    customPrompt: ""
+    customPrompt: "",
+    masterPrompt: ""
 };
 
 const INTERESTS_LIST = ["Stoizismus", "Achtsamkeit", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
@@ -193,18 +195,40 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                         <input type="range" min="0" max="2" step="0.05" value={config.temperature} onChange={e => setConfig({ ...config, temperature: parseFloat(e.target.value) })} className="w-full accent-green-500" />
                     </div>
 
-                    {/* Custom Prompt */}
-                    <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-                        <h3 className="text-xl font-bold mb-4">Custom Instructions (Inject)</h3>
-                        <textarea
-                            className="h-32 font-mono text-sm leading-relaxed"
-                            value={config.customPrompt}
-                            onChange={e => setConfig({ ...config, customPrompt: e.target.value })}
-                        />
-                    </div>
+                    {/* Custom Prompt (Master Template) */}
+                    <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Master Prompt Template</h3>
+                            <button
+                                onClick={() => setIsSafe(!isSafe)}
+                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all
+                                ${isSafe ? 'bg-green-500/10 text-green-400 border border-green-500/50' : 'bg-red-500/10 text-red-400 border border-red-500/50 animate-pulse'}`}
+                            >
+                                {isSafe ? <Lock size={14} /> : <Unlock size={14} />}
+                                {isSafe ? "Locked" : "Unlocked"}
+                            </button>
+                        </div>
 
-                    {/* Controls */}
-                    <div className="sticky bottom-8 bg-black/90 backdrop-blur border border-gray-800 p-4 rounded-xl flex items-center justify-between shadow-2xl">
+                        <div className="relative group">
+                            <div className={`absolute inset-0 bg-red-500/5 rounded-lg border-2 border-red-500/20 pointer-events-none transition-opacity duration-300 ${isSafe ? 'opacity-0' : 'opacity-100'}`} />
+
+                            <textarea
+                                className={`w-full h-96 font-mono text-xs leading-relaxed p-4 rounded-lg bg-black/50 border transition-all duration-300
+                                ${isSafe ? 'text-gray-500 border-gray-800 cursor-not-allowed' : 'text-gray-200 border-red-500/30 focus:border-red-500 focus:ring-1 focus:ring-red-500/20'}
+                            `}
+                                value={config.masterPrompt || ""}
+                                onChange={e => setConfig({ ...config, masterPrompt: e.target.value })}
+                                disabled={isSafe}
+                                placeholder="Standard Template wird verwendet..."
+                            />
+                        </div>
+
+                        <div className="mt-4 flex gap-4 text-xs font-mono text-gray-500">
+                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{INTERESTS}}"}</span>
+                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{MODE}}"}</span>
+                            <span className="px-2 py-1 bg-gray-800 rounded border border-gray-700">{"{{MODE_INSTRUCTIONS}}"}</span>
+                        </div>
+                    </div>    <div className="sticky bottom-8 bg-black/90 backdrop-blur border border-gray-800 p-4 rounded-xl flex items-center justify-between shadow-2xl">
                         <button onClick={() => setIsSafe(!isSafe)} className={`flex items-center gap-2 ${isSafe ? 'text-green-500' : 'text-red-500'}`}>
                             {isSafe ? <Lock /> : <Unlock />}
                             <span className="text-xs uppercase font-bold tracking-wider">{isSafe ? "Locked" : "Editing"}</span>

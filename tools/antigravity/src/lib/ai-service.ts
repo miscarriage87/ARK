@@ -69,7 +69,11 @@ export async function getDailyQuote(userId: string) {
             // Get User Preferences & Admin Config
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
-            let aiConfig = { temperature: 1.15, modeWeights: { quote: 60, question: 30, pulse: 10 }, customPrompt: "" };
+            let aiConfig = {
+                temperature: 1.15,
+                modeWeights: { quote: 60, question: 30, pulse: 10 },
+                masterPrompt: ""
+            };
 
             if (user?.aiConfig) {
                 try {
@@ -89,49 +93,56 @@ export async function getDailyQuote(userId: string) {
 
             const mode = modes[Math.floor(Math.random() * modes.length)];
 
-            const prompt = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau), der den Nutzer aufwecken und berühren will.
-            Das heutige Format ist: ${mode}.
-            
-            Der Nutzer interessiert sich für: ${prefs.interests || "Leben, Liebe, Erfolg"}.
-            Wähle ein Thema davon.
+            // Master Prompt Template
+            const DEFAULT_MASTER_PROMPT = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau).
+Das heutige Format ist: {{MODE}}.
 
-            CUSTOM INSTRUCTIONS:
-            ${aiConfig.customPrompt || "Keine besonderen Anweisungen."}
+Der Nutzer interessiert sich für: {{INTERESTS}}.
+Wähle ein Thema davon.
 
-            ANWEISUNGEN FÜR ${mode}:
-            ${mode === "QUOTE" ? `
-            - Suche ein tiefgründiges Zitat (deutsch).
-            - Autor kann bekannt sein oder 'Unbekannt'.
-            ` : mode === "QUESTION" ? `
-            - Formuliere eine RADIKALE, direkte Frage an den Nutzer ("Du"-Form).
-            - Beispiel: "Wofür bist du heute unendlich dankbar?" oder "Was würdest du tun, wenn du keine Angst hättest?"
-            - "author" Feld soll "Reflexion" sein.
-            ` : `
-            - Formuliere einen kurzen, kraftvollen Impuls oder Mantra ("Du"-Form).
-            - Beispiel: "Atme tief ein. Das Leben ist jetzt."
-            - "author" Feld soll "Impuls" sein.
-            `}
+ANWEISUNGEN FÜR {{MODE}}:
+{{MODE_INSTRUCTIONS}}
 
-            ANALYSE (für alle Formate):
-            - Analysiere den Text auf schwierige/spannende Begriffe (Fremdwörter, Konzepte).
-            - Identifiziere 1-3 Begriff, die IM TEXT vorkommen.
-            - Falls der Text einfach ist, lass "concepts" leer.
+ANALYSE (für alle Formate):
+- Analysiere den Text auf schwierige/spannende Begriffe (Fremdwörter, Konzepte).
+- Identifiziere 1-3 Begriff, die IM TEXT vorkommen.
+- Falls der Text einfach ist, lass "concepts" leer.
 
-            Output JSON:
-            {
-              "content": "Text des Zitats/Frage/Impuls",
-              "author": "Name oder 'Reflexion'/'Impuls'",
-              "explanation": "Kurze Deutung oder Coaching-Hinweis dazu (2-3 Sätze).",
-              "category": "Kategorie (Ein Wort)",
-              "concepts": [ { "word": "Begriff", "definition": "Erklärung" } ] 
-            }
-            `;
+Output JSON:
+{
+  "content": "Text des Zitats/Frage/Impuls",
+  "author": "Name oder 'Reflexion'/'Impuls'",
+  "explanation": "Kurze Deutung oder Coaching-Hinweis dazu (2-3 Sätze).",
+  "category": "Kategorie (Ein Wort)",
+  "concepts": [ { "word": "Begriff", "definition": "Erklärung" } ] 
+}`;
+
+            const MODE_INSTRUCTIONS = {
+                QUOTE: `
+- Suche ein tiefgründiges Zitat (deutsch).
+- Autor kann bekannt sein oder 'Unbekannt'.`,
+                QUESTION: `
+- Formuliere eine RADIKALE, direkte Frage an den Nutzer ("Du"-Form).
+- Beispiel: "Wofür bist du heute unendlich dankbar?"
+- "author" Feld soll "Reflexion" sein.`,
+                PULSE: `
+- Formuliere einen kurzen, kraftvollen Impuls oder Mantra ("Du"-Form).
+- Beispiel: "Atme tief ein. Das Leben ist jetzt."
+- "author" Feld soll "Impuls" sein.`
+            };
+
+            let masterPrompt = aiConfig.masterPrompt || DEFAULT_MASTER_PROMPT;
+
+            // Variable Substitution
+            masterPrompt = masterPrompt.replace("{{MODE}}", mode);
+            masterPrompt = masterPrompt.replace("{{INTERESTS}}", prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
+            masterPrompt = masterPrompt.replace("{{MODE_INSTRUCTIONS}}", MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
 
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
-                    { role: "system", content: "Du bist ein intellektueller Mentor. Du schätzt präzise Sprache und Vielfalt." },
-                    { role: "user", content: prompt }
+                    { role: "system", content: "Du bist ein intellektueller Mentor." },
+                    { role: "user", content: masterPrompt }
                 ],
                 response_format: { type: "json_object" },
                 temperature: aiConfig.temperature
