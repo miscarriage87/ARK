@@ -114,55 +114,56 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                 <button onClick={() => router.push('/admin/dashboard')} className="flex items-center gap-2 text-gray-400 hover:text-white">
                     <ArrowLeft size={20} /> Dashboard
                 </button>
-                <div className="flex gap-4">
+                <div className="flex bg-gray-900/50 p-1 rounded-full border border-gray-800">
                     <button
                         onClick={() => setActiveTab("config")}
-                        className={`px-4 py-2 rounded-full font-bold ${activeTab === 'config' ? 'bg-white text-black' : 'bg-gray-800 text-gray-400'}`}
+                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${activeTab === 'config' ? 'bg-gray-200 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
                     >
                         AI Configuration
                     </button>
                     <button
                         onClick={() => setActiveTab("database")}
-                        className={`px-4 py-2 rounded-full font-bold ${activeTab === 'database' ? 'bg-white text-black' : 'bg-gray-800 text-gray-400'}`}
+                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${activeTab === 'database' ? 'bg-gray-200 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
                     >
                         Database Inspector
                     </button>
                 </div>
             </div>
 
-            <h1 className="text-3xl font-serif mb-2">{user.name}</h1>
-            <p className="text-gray-500 mb-8 font-mono text-sm">{userId}</p>
+            <h1 className="text-4xl font-serif mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{user.name}</h1>
+            <p className="text-gray-600 mb-10 font-mono text-xs uppercase tracking-widest">{userId}</p>
 
             {activeTab === "config" ? (
                 <div className="grid gap-8">
                     {/* Prompt Preview */}
-                    <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-                        <h3 className="text-xl font-bold mb-4">Actual Prompt Preview</h3>
-                        <div className="bg-black p-4 rounded text-xs font-mono text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto border border-gray-700">
+                    <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
+                        <h3 className="text-lg font-bold mb-4 text-purple-400 uppercase tracking-wider text-xs">Generated Prompt Preview</h3>
+                        <div className="bg-black/80 p-4 rounded-lg font-mono text-xs text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto border border-gray-700/50 shadow-inner">
                             {promptPreview}
                         </div>
-                        <p className="text-sm text-gray-500 mt-2">Das ist der finale Prompt, der generiert wird.</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-8">
                         {/* Interests */}
-                        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-                            <h3 className="text-xl font-bold mb-4">Interessen (Kategorien)</h3>
-                            <div className="flex flex-wrap gap-2">
+                        <div className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 backdrop-blur-sm">
+                            <h3 className="text-lg font-bold mb-4 text-purple-400 uppercase tracking-wider text-xs">Interessen</h3>
+                            <div className="flex flex-wrap gap-3">
                                 {INTERESTS_LIST.map(tag => (
                                     <button
                                         key={tag}
                                         onClick={() => !isSafe && toggleInterest(tag)}
-                                        className={`px-3 py-1 rounded-full text-sm border 
-                                            ${interests.includes(tag) ? 'bg-white text-black border-white' : 'bg-transparent text-gray-400 border-gray-600'}
-                                            ${isSafe ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-white'}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200
+                                            ${interests.includes(tag)
+                                                ? 'bg-purple-600 text-white border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                                                : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-gray-500 hover:bg-gray-800'}
+                                            ${isSafe ? 'cursor-not-allowed opacity-50' : 'cursor-pointer transform hover:-translate-y-0.5'}
                                         `}
                                     >
                                         {tag}
                                     </button>
                                 ))}
                             </div>
-                            <p className="text-sm text-gray-500 mt-4">Wird in 'preferences' gespeichert. Max 3 empfohlen.</p>
+                            <p className="text-xs text-gray-500 mt-4 font-mono">Maximal 3 auswählen für beste Ergebnisse.</p>
                         </div>
 
                         {/* Weights */}
