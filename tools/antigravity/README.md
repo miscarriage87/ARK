@@ -1,41 +1,36 @@
-# Antigravity - Komplette ARK Implementation
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-**Vollständige Abreißkalender-Anwendung**
+## Getting Started
 
-## 🎯 Deine Mission
-Implementiere die **komplette ARK-Anwendung** mit deinem einzigartigen Ansatz:
+First, run the development server:
 
-- ✅ **Frontend**: UI/UX Implementation
-- ✅ **Backend**: Server-Architektur & APIs
-- ✅ **KI-Integration**: Content-Generierung & Personalisierung
-- ✅ **Mobile**: Progressive Web App Features
-- ✅ **Deployment**: CI/CD & Hosting-Strategien
-
-## 📁 Dein Arbeitsbereich
-```
-tools/antigravity/
-├── README.md          # Diese Datei
-├── frontend/          # UI/UX Implementation
-├── backend/           # Server & API
-├── ai/                # KI-Integration
-├── mobile/            # PWA Features
-├── deployment/        # CI/CD & Hosting
-└── docs/              # Dokumentation
-```
-
-## 🔄 Workflow
-1. **Master-Branch**: `tool/antigravity`
-2. **Feature-Branches**: `tool/antigravity/{feature}`
-3. **Arbeiten**: Nur in `/tools/antigravity/`
-4. **Commit**: `tool(antigravity): <beschreibung>`
-5. **PR**: Nach `main`
-
-## 🚀 Schnellstart
 ```bash
-git checkout tool/antigravity 2>/dev/null || git checkout -b tool/antigravity
-cd tools/antigravity/
-# Implementiere komplette ARK-App hier
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## 📋 Regeln
-Siehe [`agents.md`](../../agents.md) für vollständige Regeln.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

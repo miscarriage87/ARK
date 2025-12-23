@@ -1,0 +1,132 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    /* Bottom sheet on mobile */
+    padding: 1rem;
+}
+
+@media (min-width: 640px) {
+    .overlay {
+        align-items: center;
+        /* Center on desktop */
+    }
+}
+
+.modal {
+    width: 100%;
+    max-width: 500px;
+    background-color: hsl(var(--card-bg));
+    border: 1px solid hsl(var(--card-border));
+    border-radius: 1.5rem 1.5rem 0 0;
+    /* Top corners only on mobile */
+    padding: 2rem;
+    box-shadow: var(--shadow-xl);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    color: white;
+}
+
+@media (min-width: 640px) {
+    .modal {
+        border-radius: 1.5rem;
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: var(--font-serif);
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.closeBtn:hover {
+    opacity: 1;
+}
+
+.section {
+    margin-bottom: 2rem;
+}
+
+.sectionTitle {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: hsl(var(--secondary));
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.chipContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.chip {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #d1d5db;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chipSelected {
+    background-color: hsl(var(--primary));
+    color: white;
+    border-color: hsl(var(--primary));
+}
+
+.saveBtn {
+    width: 100%;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.8));
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+.installGuide {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #d1d5db;
+}
+
+.iconRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-weight: bold;
+    color: white;
+}

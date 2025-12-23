@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique // Name acts as the identifier for URL
+  
+  onboardingCompleted Boolean @default(false)
+  preferences         String? // JSON string
+  aiConfig            String? // JSON string for Admin overrides { temp, weights, prompt }
+  
+  views     DailyView[]
+  ratings   Rating[]
+  shares    Share[]
+}
+
+model Quote {
+  id          Int      @id @default(autoincrement())
+  content     String
+  author      String?
+  explanation String?
+  category    String?  // The "Tag" or "Topic"
+  tags        String?  // Comma separated
+  concepts    String?  // JSON string of { word: definition }
+  
+  generatedAt DateTime @default(now())
+  sourceModel String? // "gpt-4o", "mock"
+  
+  views       DailyView[]
+  ratings     Rating[]
+  shares      Share[]
+
+  @@index([category])
+}
+
+model DailyView {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  quoteId   Int
+  viewedAt  DateTime @default(now())
+  
+  date      String   // "YYYY-MM-DD"
+  
+  user      User     @relation(fields: [userId], references: [id])
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model Rating {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  quoteId   Int
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+  score     Int      
+  createdAt DateTime @default(now())
+}
+
+model Share {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  quoteId   Int
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+  platform  String?
+  createdAt DateTime @default(now())
+}

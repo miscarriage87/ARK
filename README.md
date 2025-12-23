@@ -97,7 +97,7 @@ Jedes Tool kann seinen eigenen Tech-Stack wählen:
 
 ---
 
-## � **Entwicklungsregeln**
+## 🧑‍💻 **Entwicklungsregeln**
 
 Alle Entwicklungsregeln und Workflows sind in [`agents.md`](agents.md) definiert.
 

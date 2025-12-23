@@ -25,5 +25,6 @@ logs/
 # env
 .env
 .env.local
+
 # Tool-specific ignores (add as needed)
 # Each tool can add their own ignore patterns here
