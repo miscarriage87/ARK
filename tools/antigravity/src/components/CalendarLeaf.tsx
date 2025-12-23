@@ -43,15 +43,31 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
     };
 
     const handleShare = async () => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'ARK',
-                text: `"${quote.content}" — ${quote.author}`,
-                url: window.location.href,
-            }).catch(err => console.log('Error sharing', err));
+        const shareData = {
+            title: 'ARK',
+            text: `"${quote.content}" — ${quote.author}`,
+        };
+
+        if (navigator.share && navigator.canShare?.(shareData as any)) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Error sharing', err);
+                }
+            }
         } else {
-            navigator.clipboard.writeText(`"${quote.content}" — ${quote.author}`);
-            alert("Zitat kopiert!");
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shareData.text);
+                    alert("Zitat kopiert!");
+                } else {
+                    throw new Error("Clipboard API not available");
+                }
+            } catch (err) {
+                console.error('Clipboard error', err);
+                alert("Teilen fehlgeschlagen. Bitte kopiere den Text manuell.");
+            }
         }
     };
 

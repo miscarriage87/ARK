@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const prefs = user.preferences ? JSON.parse(user.preferences) : {};
     let aiConfig = {
         temperature: 1.15,
-        modeWeights: { quote: 60, question: 30, pulse: 10 },
+        modeWeights: { quote: 50, question: 30, pulse: 20 },
         masterPrompt: ""
     };
 
@@ -24,9 +24,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     // Weighted Random Mode Selection for PREVIEW
-    // For preview, we default to "QUOTE" but could allow user to switch?
-    // Let's stick to QUOTE as the baseline example.
-    const mode = "QUOTE";
+    const modes = [];
+    for (let i = 0; i < aiConfig.modeWeights.quote; i++) modes.push("QUOTE");
+    for (let i = 0; i < aiConfig.modeWeights.question; i++) modes.push("QUESTION");
+    for (let i = 0; i < aiConfig.modeWeights.pulse; i++) modes.push("PULSE");
+    // Fallback if weights are 0
+    if (modes.length === 0) modes.push("QUOTE");
+
+    const mode = modes[Math.floor(Math.random() * modes.length)];
 
     const DEFAULT_MASTER_PROMPT = `Handele als 'Soul-Coach' (inspiriert von Veit Lindau).
 Das heutige Format ist: {{MODE}}.

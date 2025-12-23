@@ -14,7 +14,7 @@ const config = {
         },
     },
     corePlugins: {
-        preflight: false,
+        // preflight: true, // Default
     },
     plugins: [],
 };

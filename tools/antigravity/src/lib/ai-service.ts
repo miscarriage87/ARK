@@ -33,8 +33,8 @@ const MOCK_QUOTES = [
     }
 ];
 
-export async function getDailyQuote(userId: string) {
-    const today = new Date().toISOString().split("T")[0];
+export async function getDailyQuote(userId: string, forcedDate?: string) {
+    const today = forcedDate || new Date().toISOString().split("T")[0];
 
     // 1. Check if user already saw a quote today
     const history = await prisma.dailyView.findUnique({
@@ -71,7 +71,7 @@ export async function getDailyQuote(userId: string) {
             const prefs = user?.preferences ? JSON.parse(user.preferences) : {};
             let aiConfig = {
                 temperature: 1.15,
-                modeWeights: { quote: 60, question: 30, pulse: 10 },
+                modeWeights: { quote: 50, question: 30, pulse: 20 },
                 masterPrompt: ""
             };
 

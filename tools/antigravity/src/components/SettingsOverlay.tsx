@@ -5,7 +5,7 @@ import { X, Save, Share } from "lucide-react";
 import styles from "./SettingsOverlay.module.css";
 import { useRouter } from "next/navigation";
 
-const INTERESTS = ["Stoizismus", "Achtsamkeit", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
+const INTERESTS = ["Achtsamkeit", "Spiritualität", "Stoizismus", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
 
 interface SettingsOverlayProps {
     isOpen: boolean;
@@ -38,13 +38,13 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
     }, [user]);
 
     const toggleInterest = (interest: string) => {
+        if (loading) return;
         setSelections(prev => {
             if (prev.includes(interest)) {
                 return prev.filter(i => i !== interest);
             }
             if (prev.length >= 3) {
-                alert("Maximal 3 Interessen wählbar.");
-                return prev;
+                return prev; // Silent limit like in Onboarding
             }
             return [...prev, interest];
         });
@@ -58,7 +58,7 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
                 headers: { "Content-Type": "application/json", "x-user-id": user.id },
                 body: JSON.stringify({ interests: selections, name: user.name }),
             });
-            alert("Gespeichert!");
+            // Removed alert("Gespeichert!") as requested/suggested for smoother UX
             router.refresh();
             onClose();
         } catch (e) {
@@ -71,14 +71,21 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className={styles.overlay} onClick={onClose}>
+                <motion.div
+                    className={styles.overlay}
+                    onClick={onClose}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <motion.div
                         className={styles.modal}
                         onClick={(e) => e.stopPropagation()}
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 25, stiffness: 500 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
                     >
                         <div className={styles.header}>
                             <h2 className={styles.title}>Einstellungen</h2>
@@ -89,15 +96,21 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
 
                         <div className={styles.section}>
                             <h3 className={styles.sectionTitle}>Deine Interessen</h3>
+                            <p className="text-[10px] text-gray-500 mb-4">Maximal 3 Kategorien auswählen.</p>
                             <div className={styles.chipContainer}>
                                 {INTERESTS.map(item => (
-                                    <button
-                                        key={item}
-                                        onClick={() => toggleInterest(item)}
-                                        className={`${styles.chip} ${selections.includes(item) ? styles.chipSelected : ""}`}
-                                    >
-                                        {item}
-                                    </button>
+                                    <div key={item} className="flex flex-col items-center">
+                                        <button
+                                            onClick={() => toggleInterest(item)}
+                                            disabled={loading}
+                                            className={`${styles.chip} ${selections.includes(item) ? styles.chipSelected : ""} ${(!selections.includes(item) && selections.length >= 3) || loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                                        >
+                                            {item}
+                                        </button>
+                                        {item === "Stoizismus" && (
+                                            <span className="text-[9px] text-gray-500 mt-1 italic whitespace-nowrap">Gelassenheit durch Vernunft</span>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -106,8 +119,10 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
                             <h3 className={styles.sectionTitle}>Deine Sammlung</h3>
                             <button
                                 onClick={() => {
-                                    router.push(`/${encodeURIComponent(user.name)}/archive`);
                                     onClose();
+                                    setTimeout(() => {
+                                        router.push(`/${encodeURIComponent(user.name)}/archive`);
+                                    }, 300);
                                 }}
                                 className={styles.chip}
                                 style={{ width: '100%', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' }}
@@ -139,7 +154,7 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
                         </button>
 
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>
     );
