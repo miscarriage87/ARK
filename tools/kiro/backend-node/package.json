@@ -5,11 +5,33 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "diagnostics": "node run-diagnostics.js",
+    "validate-env": "node validate-env.js",
+    "validate-static": "node validate-static-files.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "openai": "^4.20.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "fast-check": "^3.15.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "*.js",
+      "!run-diagnostics.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
   },
   "keywords": ["ark", "calendar", "quotes", "api"],
   "author": "ARK Team",

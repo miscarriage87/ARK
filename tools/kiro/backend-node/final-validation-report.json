@@ -1,0 +1,301 @@
+{
+  "timestamp": "2025-12-22T03:30:08.886Z",
+  "overallStatus": "issues",
+  "components": {
+    "backend": {
+      "name": "backend",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "Server Running",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 20
+        },
+        {
+          "name": "Root endpoint",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 2
+        },
+        {
+          "name": "Today's quote",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 2112
+        },
+        {
+          "name": "Quotes list",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 2
+        },
+        {
+          "name": "Themes list",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 1
+        },
+        {
+          "name": "AI status",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 455
+        },
+        {
+          "name": "User profile",
+          "passed": true,
+          "message": "Response: 200",
+          "duration": 3
+        },
+        {
+          "name": "Environment Configuration",
+          "passed": false,
+          "message": "Missing: PORT, OPENAI_API_KEY, ENABLE_AI_GENERATION"
+        },
+        {
+          "name": "Static File Serving",
+          "passed": true,
+          "message": "Response: 200 (non-JSON)",
+          "duration": 4
+        }
+      ],
+      "issues": [],
+      "dependencies": []
+    },
+    "frontend": {
+      "name": "frontend",
+      "status": "healthy",
+      "tests": [
+        {
+          "name": "index.html exists",
+          "passed": true,
+          "message": "index.html found"
+        },
+        {
+          "name": "app.js exists",
+          "passed": true,
+          "message": "app.js found"
+        },
+        {
+          "name": "Element: Loading screen",
+          "passed": true,
+          "message": "Loading screen found"
+        },
+        {
+          "name": "Element: Daily quote view",
+          "passed": true,
+          "message": "Daily quote view found"
+        },
+        {
+          "name": "Element: Archive view",
+          "passed": true,
+          "message": "Archive view found"
+        },
+        {
+          "name": "Element: Profile setup view",
+          "passed": true,
+          "message": "Profile setup view found"
+        },
+        {
+          "name": "Element: Settings view",
+          "passed": true,
+          "message": "Settings view found"
+        },
+        {
+          "name": "Element: Quote text element",
+          "passed": true,
+          "message": "Quote text element found"
+        },
+        {
+          "name": "Element: Quote author element",
+          "passed": true,
+          "message": "Quote author element found"
+        },
+        {
+          "name": "Element: Like button",
+          "passed": true,
+          "message": "Like button found"
+        },
+        {
+          "name": "Element: Neutral button",
+          "passed": true,
+          "message": "Neutral button found"
+        },
+        {
+          "name": "Element: Dislike button",
+          "passed": true,
+          "message": "Dislike button found"
+        },
+        {
+          "name": "Element: Today navigation",
+          "passed": true,
+          "message": "Today navigation found"
+        },
+        {
+          "name": "Element: Archive navigation",
+          "passed": true,
+          "message": "Archive navigation found"
+        },
+        {
+          "name": "Element: Settings navigation",
+          "passed": true,
+          "message": "Settings navigation found"
+        },
+        {
+          "name": "CSS files exist",
+          "passed": true,
+          "message": "main.css found"
+        }
+      ],
+      "issues": [],
+      "dependencies": [
+        "backend"
+      ]
+    },
+    "apiIntegration": {
+      "name": "apiIntegration",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "OpenAI API Key Configured",
+          "message": "API key missing"
+        },
+        {
+          "name": "AI Generation Enabled",
+          "passed": false,
+          "message": "AI generation disabled"
+        },
+        {
+          "name": "Quote API Response Format",
+          "passed": "Unbekannt",
+          "message": "Valid quote format"
+        },
+        {
+          "name": "CORS Configuration",
+          "passed": true,
+          "message": "CORS middleware configured"
+        }
+      ],
+      "issues": [],
+      "dependencies": [
+        "backend"
+      ]
+    },
+    "pwaFeatures": {
+      "name": "pwaFeatures",
+      "status": "healthy",
+      "tests": [
+        {
+          "name": "Web App Manifest",
+          "passed": true,
+          "message": "manifest.json found"
+        },
+        {
+          "name": "Service Worker",
+          "passed": true,
+          "message": "sw.js found"
+        },
+        {
+          "name": "PWA Icons",
+          "passed": true,
+          "message": "Icons directory found"
+        }
+      ],
+      "issues": [],
+      "dependencies": [
+        "frontend"
+      ]
+    },
+    "configuration": {
+      "name": "configuration",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "Backend .env file",
+          "passed": true,
+          "message": ".env file found"
+        },
+        {
+          "name": "Env var: PORT",
+          "passed": false,
+          "message": "PORT missing"
+        },
+        {
+          "name": "Env var: OPENAI_API_KEY",
+          "passed": false,
+          "message": "OPENAI_API_KEY missing"
+        },
+        {
+          "name": "Env var: ENABLE_AI_GENERATION",
+          "passed": false,
+          "message": "ENABLE_AI_GENERATION missing"
+        },
+        {
+          "name": "Package.json files",
+          "passed": true,
+          "message": "Package configuration files found"
+        },
+        {
+          "name": "Dependencies installed",
+          "passed": true,
+          "message": "All dependencies installed"
+        }
+      ],
+      "issues": [],
+      "dependencies": []
+    }
+  },
+  "issues": [
+    {
+      "id": "issue-1",
+      "component": "backend",
+      "severity": "medium",
+      "description": "Environment configuration incomplete",
+      "rootCause": "Missing: PORT, OPENAI_API_KEY, ENABLE_AI_GENERATION",
+      "solution": "Check .env file and ensure all required variables are set",
+      "timestamp": "2025-12-22T03:30:11.482Z"
+    },
+    {
+      "id": "issue-2",
+      "component": "apiIntegration",
+      "severity": "medium",
+      "description": "OpenAI API key not configured",
+      "rootCause": "OPENAI_API_KEY environment variable is missing",
+      "solution": "Add OPENAI_API_KEY to .env file to enable AI quote generation",
+      "timestamp": "2025-12-22T03:30:11.487Z"
+    },
+    {
+      "id": "issue-3",
+      "component": "configuration",
+      "severity": "medium",
+      "description": "Missing environment variables",
+      "rootCause": "Variables not set: PORT, OPENAI_API_KEY, ENABLE_AI_GENERATION",
+      "solution": "Add missing variables to .env file",
+      "timestamp": "2025-12-22T03:30:13.445Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "medium",
+      "title": "Address Medium Priority Issues",
+      "description": "Fix issues that may cause problems or limit features",
+      "actions": [
+        "Check .env file and ensure all required variables are set",
+        "Add OPENAI_API_KEY to .env file to enable AI quote generation",
+        "Add missing variables to .env file"
+      ]
+    }
+  ],
+  "summary": {
+    "totalComponents": 5,
+    "healthyComponents": 2,
+    "warningComponents": 3,
+    "errorComponents": 0,
+    "totalIssues": 3,
+    "criticalIssues": 0,
+    "highIssues": 0,
+    "mediumIssues": 3,
+    "lowIssues": 0
+  }
+}

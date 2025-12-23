@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 ARK Test-Seite</h1>
+        <p>Diese Seite testet die grundlegende Funktionalität:</p>
+        
+        <h2>✅ Server-Test</h2>
+        <p>Wenn du diese Seite siehst, läuft der Server korrekt.</p>
+        
+        <h2>🔗 API-Test</h2>
+        <button class="test-button" onclick="testAPI()">API testen</button>
+        <div id="api-result"></div>
+        
+        <h2>🤖 KI-Test</h2>
+        <button class="test-button" onclick="testAI()">KI-Spruch generieren</button>
+        <div id="ai-result"></div>
+        
+        <h2>🔄 Navigation</h2>
+        <a href="/app" class="test-button" style="display: inline-block; text-decoration: none;">Zur Haupt-App</a>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('api-result');
+            result.innerHTML = 'Teste API...';
+            
+            try {
+                const response = await fetch('/api/quotes/today');
+                const data = await response.json();
+                result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Fehler: ${error.message}</p>`;
+            }
+        }
+        
+        async function testAI() {
+            const result = document.getElementById('ai-result');
+            result.innerHTML = 'Generiere KI-Spruch...';
+            
+            try {
+                const response = await fetch('/api/quotes/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        theme: 'Motivation',
+                        mood: 'positiv',
+                        length: 'medium'
+                    })
+                });
+                const data = await response.json();
+                result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Fehler: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

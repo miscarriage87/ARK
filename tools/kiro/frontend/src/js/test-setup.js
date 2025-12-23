@@ -4,6 +4,42 @@
  * Global test configuration and mocks for the frontend test suite.
  */
 
+// Mock Response constructor for PWA tests
+global.Response = class Response {
+    constructor(body, init = {}) {
+        this.body = body;
+        this.status = init.status || 200;
+        this.statusText = init.statusText || 'OK';
+        this.headers = new Map(Object.entries(init.headers || {}));
+        this.ok = this.status >= 200 && this.status < 300;
+    }
+    
+    async json() {
+        return JSON.parse(this.body);
+    }
+    
+    async text() {
+        return this.body;
+    }
+    
+    clone() {
+        return new Response(this.body, {
+            status: this.status,
+            statusText: this.statusText,
+            headers: Object.fromEntries(this.headers)
+        });
+    }
+};
+
+// Mock Request constructor
+global.Request = class Request {
+    constructor(url, init = {}) {
+        this.url = url;
+        this.method = init.method || 'GET';
+        this.headers = new Map(Object.entries(init.headers || {}));
+    }
+};
+
 // Mock localStorage
 const localStorageMock = {
     getItem: jest.fn(),

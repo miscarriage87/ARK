@@ -5,12 +5,12 @@
  */
 
 // API configuration
-export const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 /**
  * API client with common functionality
  */
-export class APIClient {
+class APIClient {
     constructor() {
         this.baseURL = API_BASE_URL;
     }
@@ -86,12 +86,12 @@ export class APIClient {
 }
 
 // Create singleton instance
-export const apiClient = new APIClient();
+const apiClient = new APIClient();
 
 /**
  * Quote API methods
  */
-export const QuoteAPI = {
+const QuoteAPI = {
     async getTodaysQuote() {
         return apiClient.get('/quotes/today');
     },
@@ -112,7 +112,7 @@ export const QuoteAPI = {
 /**
  * User API methods
  */
-export const UserAPI = {
+const UserAPI = {
     async getProfile() {
         return apiClient.get('/users/profile');
     },
@@ -133,7 +133,7 @@ export const UserAPI = {
 /**
  * Theme API methods
  */
-export const ThemeAPI = {
+const ThemeAPI = {
     async getCurrentTheme() {
         return apiClient.get('/themes/current');
     },
@@ -146,7 +146,7 @@ export const ThemeAPI = {
 /**
  * Notification API methods
  */
-export const NotificationAPI = {
+const NotificationAPI = {
     async getVapidKey() {
         return apiClient.get('/notifications/vapid-public-key');
     },
@@ -171,3 +171,19 @@ export const NotificationAPI = {
         return apiClient.post('/notifications/test', { message });
     }
 };
+
+// Export for both CommonJS and ES6
+module.exports = {
+    API_BASE_URL,
+    APIClient,
+    apiClient,
+    QuoteAPI,
+    UserAPI,
+    ThemeAPI,
+    NotificationAPI
+};
+
+// ES6 exports for browser compatibility
+if (typeof window !== 'undefined') {
+    window.APIModule = module.exports;
+}

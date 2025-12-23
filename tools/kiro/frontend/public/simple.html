@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK Digitaler Kalender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .quote-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .quote-text {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-style: italic;
+        }
+        
+        .quote-author {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .quote-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .feedback {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .feedback-btn {
+            background: none;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .feedback-btn:hover {
+            transform: scale(1.1);
+            border-color: #007bff;
+        }
+        
+        .feedback-btn.active {
+            background: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .status.online {
+            background: rgba(40, 167, 69, 0.9);
+        }
+        
+        @media (max-width: 768px) {
+            .quote-card {
+                padding: 2rem;
+                margin: 1rem;
+            }
+            
+            .quote-text {
+                font-size: 1.2rem;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">🤖 KI Bereit</div>
+    
+    <header class="header">
+        <h1>ARK</h1>
+        <p>Digitaler Kalender</p>
+    </header>
+    
+    <main class="main">
+        <div class="quote-card">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Lade deine tägliche Inspiration...</p>
+            </div>
+            
+            <div id="quote-content">
+                <blockquote class="quote-text" id="quote-text">
+                    Willkommen bei ARK! Klicke auf "Neuer Spruch" für deine erste KI-generierte Inspiration.
+                </blockquote>
+                <cite class="quote-author" id="quote-author">— ARK Team</cite>
+                
+                <div class="quote-meta">
+                    <span id="quote-date">Heute</span>
+                    <span id="quote-theme">Willkommen</span>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn" id="generate-btn" onclick="generateQuote()">
+                        🤖 Neuer Spruch
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadTodayQuote()">
+                        📅 Heutiger Spruch
+                    </button>
+                </div>
+                
+                <div class="feedback">
+                    <button class="feedback-btn" onclick="giveFeedback('dislike')">👎</button>
+                    <button class="feedback-btn" onclick="giveFeedback('neutral')">😐</button>
+                    <button class="feedback-btn" onclick="giveFeedback('like')">👍</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentQuote = null;
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('quote-content').style.opacity = '0.5';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('quote-content').style.opacity = '1';
+        }
+        
+        function displayQuote(quote) {
+            document.getElementById('quote-text').textContent = quote.text;
+            document.getElementById('quote-author').textContent = quote.author ? `— ${quote.author}` : '';
+            document.getElementById('quote-date').textContent = new Date().toLocaleDateString('de-DE');
+            document.getElementById('quote-theme').textContent = quote.theme + (quote.generated ? ' 🤖' : '');
+            currentQuote = quote;
+        }
+        
+        async function generateQuote() {
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.textContent = '🤖 Generiere...';
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/quotes/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        theme: 'Motivation',
+                        mood: 'positiv',
+                        length: 'medium'
+                    })
+                });
+                
+                const data = await response.json();
+                displayQuote(data.quote);
+                
+                // Success animation
+                btn.style.background = '#28a745';
+                btn.textContent = '✅ Generiert!';
+                setTimeout(() => {
+                    btn.style.background = '#007bff';
+                    btn.textContent = '🤖 Neuer Spruch';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Fehler:', error);
+                btn.style.background = '#dc3545';
+                btn.textContent = '❌ Fehler';
+                setTimeout(() => {
+                    btn.style.background = '#007bff';
+                    btn.textContent = '🤖 Neuer Spruch';
+                }, 3000);
+            } finally {
+                btn.disabled = false;
+                hideLoading();
+            }
+        }
+        
+        async function loadTodayQuote() {
+            showLoading();
+            try {
+                const response = await fetch('/api/quotes/today');
+                const quote = await response.json();
+                displayQuote(quote);
+            } catch (error) {
+                console.error('Fehler:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function giveFeedback(rating) {
+            if (!currentQuote) return;
+            
+            // Visual feedback
+            document.querySelectorAll('.feedback-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Send feedback (optional)
+            fetch(`/api/quotes/${currentQuote.id}/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating })
+            }).catch(console.error);
+        }
+        
+        // Load initial quote
+        loadTodayQuote();
+        
+        // Update status
+        fetch('/api/ai-status')
+            .then(r => r.json())
+            .then(data => {
+                const status = document.getElementById('status');
+                status.textContent = data.ai_enabled ? '🤖 KI Aktiv' : '❌ KI Inaktiv';
+                status.className = data.ai_enabled ? 'status online' : 'status';
+            })
+            .catch(() => {
+                document.getElementById('status').textContent = '❌ Offline';
+            });
+    </script>
+</body>
+</html>

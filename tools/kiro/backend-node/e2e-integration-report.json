@@ -1,0 +1,69 @@
+{
+  "timestamp": "2025-12-23T00:09:31.546Z",
+  "totalTests": 10,
+  "passedTests": 3,
+  "failedTests": 7,
+  "successRate": 30,
+  "testResults": [
+    {
+      "test": "Complete User Onboarding",
+      "passed": false,
+      "details": "Profile creation failed: 404",
+      "timestamp": "2025-12-23T00:09:31.499Z"
+    },
+    {
+      "test": "Daily Quote Workflow",
+      "passed": false,
+      "details": "Quotes list is empty or invalid",
+      "timestamp": "2025-12-23T00:09:31.501Z"
+    },
+    {
+      "test": "Quote Feedback Workflow",
+      "passed": false,
+      "details": "Feedback submission failed: 404",
+      "timestamp": "2025-12-23T00:09:31.504Z"
+    },
+    {
+      "test": "Archive Browsing Workflow",
+      "passed": false,
+      "details": "No quotes available for archive",
+      "timestamp": "2025-12-23T00:09:31.505Z"
+    },
+    {
+      "test": "Profile Management Workflow",
+      "passed": false,
+      "details": "Profile retrieval failed: 404",
+      "timestamp": "2025-12-23T00:09:31.507Z"
+    },
+    {
+      "test": "Offline to Online Workflow",
+      "passed": true,
+      "details": "Online functionality verified, offline assets available, PWA files accessible",
+      "timestamp": "2025-12-23T00:09:31.521Z"
+    },
+    {
+      "test": "PWA Installation Workflow",
+      "passed": true,
+      "details": "Manifest valid, service worker available, 8/8 icons found",
+      "timestamp": "2025-12-23T00:09:31.531Z"
+    },
+    {
+      "test": "Error Recovery Workflow",
+      "passed": false,
+      "details": "Server not responsive after errors: 404",
+      "timestamp": "2025-12-23T00:09:31.537Z"
+    },
+    {
+      "test": "Performance Requirements",
+      "passed": true,
+      "details": "API: 1ms, Static: 1ms, Concurrent (5x): 5ms",
+      "timestamp": "2025-12-23T00:09:31.544Z"
+    },
+    {
+      "test": "Cross-Component Integration",
+      "passed": false,
+      "details": "Profile retrieval failed: 404",
+      "timestamp": "2025-12-23T00:09:31.545Z"
+    }
+  ]
+}

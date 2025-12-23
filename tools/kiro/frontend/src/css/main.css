@@ -147,6 +147,93 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Accessibility and Keyboard Navigation */
+.keyboard-navigation *:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: var(--border-radius-sm);
+}
+
+.keyboard-navigation button:focus,
+.keyboard-navigation input:focus,
+.keyboard-navigation select:focus,
+.keyboard-navigation textarea:focus {
+  box-shadow: 0 0 0 3px rgba(var(--primary-color), 0.2);
+}
+
+/* Skip link for screen readers */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--primary-color);
+  color: var(--white);
+  padding: 8px;
+  text-decoration: none;
+  border-radius: var(--border-radius-sm);
+  z-index: var(--z-tooltip);
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Touch and gesture improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch device optimizations */
+  button, .nav-item, .feedback-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .nav-item:hover {
+    transform: none; /* Disable hover effects on touch devices */
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000000;
+    --shadow-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  [data-theme="dark"] {
+    --border-color: #ffffff;
+    --shadow-color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .view {
+    animation: none;
+  }
+}
+
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   margin: 0 0 var(--spacing-md) 0;
@@ -238,15 +325,39 @@ cite {
 .view {
   display: block;
   animation: fadeIn var(--transition-base);
+  transition: opacity var(--transition-base) ease-in-out, 
+              transform var(--transition-base) ease-in-out;
 }
 
 .view.hidden {
   display: none;
 }
 
+/* Prevent interactions during view transitions */
+.view-transitioning {
+  pointer-events: none;
+}
+
+.view-transitioning .view {
+  pointer-events: auto;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth transitions for navigation buttons */
+.nav-item {
+  transition: all var(--transition-fast);
+}
+
+.nav-item:hover {
+  transform: translateY(-2px);
+}
+
+.nav-item.active {
+  transform: translateY(0);
 }
 
 /* Loading Screen */
@@ -381,6 +492,75 @@ cite {
   background-color: var(--gray-200);
   border-color: var(--primary-color);
   color: var(--primary-color);
+}
+
+.action-btn:disabled {
+  background-color: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--gray-400);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* AI Status Indicator */
+.ai-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  transition: var(--transition-fast);
+  margin-top: var(--spacing-sm);
+}
+
+.ai-status-indicator.ai-enabled {
+  background-color: var(--success-color);
+  color: var(--white);
+}
+
+.ai-status-indicator.ai-disabled {
+  background-color: var(--warning-color);
+  color: var(--gray-800);
+}
+
+/* AI Status Display in Settings */
+.ai-status-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+}
+
+.ai-status-display.ai-enabled {
+  border-color: var(--success-color);
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.ai-status-display.ai-disabled {
+  border-color: var(--warning-color);
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.ai-status-display.ai-warning {
+  border-color: var(--danger-color);
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.setting-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
 }
 
 /* Archive View */

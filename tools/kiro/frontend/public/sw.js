@@ -5,25 +5,21 @@
  * for the ARK digital calendar application.
  */
 
-const CACHE_NAME = 'ark-v1.0.0';
-const STATIC_CACHE = 'ark-static-v1.0.0';
-const DYNAMIC_CACHE = 'ark-dynamic-v1.0.0';
+const CACHE_NAME = 'ark-v1.0.2';
+const STATIC_CACHE = 'ark-static-v1.0.2';
+const DYNAMIC_CACHE = 'ark-dynamic-v1.0.2';
 
-// Files to cache immediately
+// Files to cache immediately - corrected paths
 const STATIC_FILES = [
     '/',
+    '/app',
     '/index.html',
     '/css/main.css',
     '/js/app.js',
     '/manifest.json',
-    '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png',
-    '/icons/icon-72x72.png',
-    '/icons/icon-96x96.png',
-    '/icons/icon-128x128.png',
-    '/icons/icon-144x144.png',
-    '/icons/icon-152x152.png',
-    '/icons/icon-384x384.png'
+    '/icons/icon-192x192.svg',
+    '/icons/icon-512x512.svg',
+    '/icons/favicon.svg'
 ];
 
 // API endpoints that should be cached for offline use
@@ -50,7 +46,7 @@ self.addEventListener('install', event => {
         caches.open(STATIC_CACHE)
             .then(cache => {
                 console.log('Service Worker: Caching static files');
-                return cache.addAll(STATIC_FILES);
+                return cache.addAll(STATIC_FILES.map(url => new Request(url, { cache: 'reload' })));
             })
             .then(() => {
                 console.log('Service Worker: Static files cached');
@@ -58,6 +54,8 @@ self.addEventListener('install', event => {
             })
             .catch(error => {
                 console.error('Service Worker: Error caching static files', error);
+                // Continue installation even if some files fail to cache
+                return self.skipWaiting();
             })
     );
 });
@@ -127,6 +125,10 @@ async function networkFirstWithOfflineFallback(request) {
             // Add offline indicator header
             const response = cachedResponse.clone();
             response.headers.set('X-Served-From', 'cache');
+            
+            // Notify main thread about offline fallback
+            notifyClients({ type: 'OFFLINE_FALLBACK', url: request.url });
+            
             return response;
         }
         
@@ -193,15 +195,15 @@ self.addEventListener('push', event => {
     
     const options = {
         body: 'Your daily inspiration is ready!',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
+        icon: '/icons/icon-192x192.svg',
+        badge: '/icons/icon-72x72.svg',
         tag: 'daily-quote',
         requireInteraction: false,
         actions: [
             {
                 action: 'view',
                 title: 'View Quote',
-                icon: '/icons/icon-96x96.png'
+                icon: '/icons/icon-96x96.svg'
             },
             {
                 action: 'dismiss',
@@ -241,7 +243,13 @@ function isStaticFile(request) {
     return STATIC_FILES.some(file => url.pathname === file) ||
            url.pathname.startsWith('/css/') ||
            url.pathname.startsWith('/js/') ||
-           url.pathname.startsWith('/icons/');
+           url.pathname.startsWith('/icons/') ||
+           url.pathname.endsWith('.js') ||
+           url.pathname.endsWith('.css') ||
+           url.pathname.endsWith('.svg') ||
+           url.pathname.endsWith('.png') ||
+           url.pathname.endsWith('.jpg') ||
+           url.pathname.endsWith('.jpeg');
 }
 
 function isAPIRequest(request) {
@@ -371,8 +379,11 @@ async function syncFeedback() {
                 console.error('Service Worker: Error syncing individual feedback:', error);
             }
         }
+        
+        notifyClients({ type: 'SYNC_COMPLETE', syncType: 'feedback' });
     } catch (error) {
         console.error('Service Worker: Error in syncFeedback:', error);
+        notifyClients({ type: 'SYNC_FAILED', syncType: 'feedback' });
     }
 }
 
@@ -401,8 +412,11 @@ async function syncProfile() {
                 console.error('Service Worker: Error syncing individual profile:', error);
             }
         }
+        
+        notifyClients({ type: 'SYNC_COMPLETE', syncType: 'profile' });
     } catch (error) {
         console.error('Service Worker: Error in syncProfile:', error);
+        notifyClients({ type: 'SYNC_FAILED', syncType: 'profile' });
     }
 }
 
@@ -429,6 +443,15 @@ async function storeForSync(requestData) {
     } catch (error) {
         console.error('Service Worker: Error storing request for sync:', error);
     }
+}
+
+// Notify all clients about events
+function notifyClients(message) {
+    self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+            client.postMessage(message);
+        });
+    });
 }
 
 // IndexedDB helper functions

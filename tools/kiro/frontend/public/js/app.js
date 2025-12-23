@@ -5,27 +5,6 @@
  * Handles initialization, routing, and core app functionality.
  */
 
-// Import profile manager and preferences manager - handle both CommonJS and ES6
-let profileManager, preferencesManager, errorHandler, errorRecovery, dependencyChecker, api;
-if (typeof require !== 'undefined') {
-    // Node.js/CommonJS environment
-    const { profileManager: pm } = require('./modules/profile.js');
-    const { preferencesManager: pref } = require('./modules/preferences.js');
-    const eh = require('./modules/error-handler.js');
-    const er = require('./modules/error-recovery.js');
-    const dc = require('./modules/dependency-checker.js');
-    const { api: apiClient } = require('./modules/api-client.js');
-    profileManager = pm;
-    preferencesManager = pref;
-    errorHandler = eh.default || eh;
-    errorRecovery = er.default || er;
-    dependencyChecker = dc.default || dc;
-    api = apiClient;
-} else {
-    // Browser environment - will be loaded via script tag
-    // profileManager, preferencesManager, errorHandler, errorRecovery, dependencyChecker, and api will be available globally
-}
-
 // Application state
 const AppState = {
     currentView: 'daily-quote',
@@ -115,190 +94,71 @@ console.log('    Offline Banner:', elements.offlineBanner ? '✅' : '❌');
 console.log('    Install Prompt:', elements.installPrompt ? '✅' : '❌');
 
 /**
- * Show initial view quickly for better perceived performance
- */
-function showInitialView(viewName) {
-    console.log(`📱 ARK: Showing initial view: ${viewName}`);
-    
-    // Hide all views first
-    Object.entries(elements.views).forEach(([key, view]) => {
-        if (view) {
-            view.classList.add('hidden');
-        }
-    });
-    
-    // Show target view immediately
-    const targetView = elements.views[viewName];
-    if (targetView) {
-        targetView.classList.remove('hidden');
-        AppState.currentView = viewName;
-        updateNavigationState(viewName);
-        updatePageTitle(viewName);
-    }
-}
-
-/**
- * Application initialization - Optimized for performance
+ * Application initialization
  */
 async function initializeApp() {
-    const startTime = performance.now();
-    console.log('🚀 ARK: Starting optimized application initialization...');
+    console.log('🚀 ARK: Starting application initialization...');
     
     try {
-        // Start performance monitoring
-        if (typeof performanceMonitor !== 'undefined') {
-            performanceMonitor.startTiming('app-initialization');
-        }
-        
-        // Phase 1: Critical path - DOM validation and basic setup (synchronous)
-        console.log('🔍 ARK: Phase 1 - Critical DOM validation...');
+        console.log('🔍 ARK: Validating DOM elements...');
+        // Validate critical DOM elements first
         if (!validateDOMElements()) {
             throw new Error('Critical DOM elements are missing. Please check the HTML structure.');
         }
+        console.log('✅ ARK: DOM elements validated successfully');
         
-        // Phase 2: Essential synchronous setup
-        console.log('📋 ARK: Phase 2 - Essential setup...');
+        console.log('📋 ARK: Setting up event listeners...');
+        // Set up event listeners
         setupEventListeners();
-        initializeBasicTheme(); // Use basic theme first for immediate visual feedback
+        console.log('✅ ARK: Event listeners set up successfully');
         
-        // Phase 3: Show loading screen early and start async operations
-        console.log('📱 ARK: Phase 3 - Early view setup...');
-        const initialView = getViewFromURL();
-        showInitialView(initialView);
+        console.log('🎨 ARK: Initializing theme...');
+        // Initialize theme
+        initializeTheme();
+        console.log('✅ ARK: Theme initialized successfully');
         
-        // Phase 4: Parallel async initialization (non-blocking)
-        console.log('🔄 ARK: Phase 4 - Parallel async initialization...');
-        const initPromises = [];
+        console.log('👤 ARK: Checking user status...');
+        // Check for existing user or show onboarding
+        await checkUserStatus();
+        console.log('✅ ARK: User status checked successfully');
         
-        // Initialize components in parallel where possible
-        if (dependencyChecker) {
-            initPromises.push(
-                dependencyChecker.checkAllDependencies().then(results => {
-                    if (results.critical > 0) {
-                        const criticalDeps = Object.entries(results.dependencies)
-                            .filter(([name, result]) => result.critical && !result.available)
-                            .map(([name]) => name);
-                        console.warn('⚠️ ARK: Critical dependencies missing:', criticalDeps);
-                    }
-                    return results;
-                }).catch(error => {
-                    console.warn('⚠️ ARK: Dependency check failed:', error);
-                    return { critical: 0, passed: 0, total: 0 };
-                })
-            );
-        }
+        console.log('📱 ARK: Loading initial view...');
+        // Load initial view
+        await loadInitialView();
+        console.log('✅ ARK: Initial view loaded successfully');
         
-        // Initialize preferences in parallel
-        if (preferencesManager) {
-            initPromises.push(
-                preferencesManager.init().then(() => {
-                    preferencesManager.setupEventListeners();
-                    return 'preferences-ready';
-                }).catch(error => {
-                    console.warn('⚠️ ARK: Preferences initialization failed:', error);
-                    return 'preferences-fallback';
-                })
-            );
-        }
+        console.log('📲 ARK: Setting up PWA features...');
+        // Set up PWA features
+        setupPWAFeatures();
+        console.log('✅ ARK: PWA features set up successfully');
         
-        // Check user status in parallel
-        initPromises.push(
-            checkUserStatus().catch(error => {
-                console.warn('⚠️ ARK: User status check failed:', error);
-                return 'user-status-fallback';
-            })
-        );
+        console.log('⌨️ ARK: Adding keyboard accessibility...');
+        // Add keyboard accessibility support
+        addKeyboardAccessibility();
+        console.log('✅ ARK: Keyboard accessibility added successfully');
         
-        // Wait for critical async operations with timeout
-        const asyncResults = await Promise.allSettled(initPromises);
-        console.log('✅ ARK: Async initialization completed');
+        console.log('👆 ARK: Adding touch support...');
+        // Add touch and gesture support
+        addTouchSupport();
+        console.log('✅ ARK: Touch support added successfully');
         
-        // Phase 5: Load view-specific content
-        console.log('📱 ARK: Phase 5 - Loading view content...');
-        await loadInitialView().catch(error => {
-            console.warn('⚠️ ARK: Initial view load failed:', error);
-        });
-        
-        // Phase 6: Non-critical features (can be deferred)
-        console.log('🔧 ARK: Phase 6 - Non-critical features...');
-        
-        // Defer non-critical initialization
-        requestIdleCallback(() => {
-            Promise.allSettled([
-                checkAIStatus().catch(e => console.warn('AI status check failed:', e)),
-                setupPWAFeatures().catch(e => console.warn('PWA setup failed:', e)),
-                addKeyboardAccessibility().catch(e => console.warn('Keyboard accessibility failed:', e)),
-                addTouchSupport().catch(e => console.warn('Touch support failed:', e))
-            ]).then(() => {
-                console.log('✅ ARK: Non-critical features initialized');
-            });
-        }, { timeout: 2000 });
-        
+        console.log('🎯 ARK: Hiding loading screen...');
         // Hide loading screen
         hideLoadingScreen();
+        console.log('✅ ARK: Loading screen hidden successfully');
         
-        const totalTime = performance.now() - startTime;
-        console.log(`🎉 ARK: Application initialized successfully in ${totalTime.toFixed(2)}ms!`);
-        
-        // End performance monitoring
-        if (typeof performanceMonitor !== 'undefined') {
-            performanceMonitor.endTiming('app-initialization');
-        }
-        
-        // Report performance if over target
-        if (totalTime > 3000) {
-            console.warn(`⚠️ ARK: Initialization took ${totalTime.toFixed(2)}ms (target: <3000ms)`);
-        }
-        
+        console.log('🎉 ARK: Application initialized successfully!');
     } catch (error) {
         console.error('❌ ARK: Failed to initialize application:', error);
-        
-        // Log error with error handler if available
-        if (errorHandler) {
-            errorHandler.handleJavaScriptError(error, {
-                component: 'app-initialization',
-                critical: true,
-                userAction: 'page-load'
-            });
-        }
-        
-        showError('Failed to initialize application. Please refresh the page.', 'javascript', error, {
-            showRetry: true,
-            retryFunction: () => window.location.reload()
-        });
+        console.error('📊 ARK: Error stack:', error.stack);
+        showError('Failed to initialize application. Please refresh the page.');
     }
 }
 
 /**
- * Initialize theme and preferences from user profile
+ * Initialize theme from localStorage or system preference
  */
-async function initializeThemeAndPreferences() {
-    console.log('🎨 ARK: Initializing theme and preferences...');
-    
-    try {
-        // Initialize preferences manager
-        if (preferencesManager) {
-            await preferencesManager.init();
-            preferencesManager.setupEventListeners();
-        } else {
-            // Fallback to basic theme initialization
-            initializeBasicTheme();
-        }
-        
-        console.log('✅ ARK: Theme and preferences initialized');
-    } catch (error) {
-        console.error('❌ ARK: Error initializing theme and preferences:', error);
-        // Fallback to basic theme
-        initializeBasicTheme();
-    }
-}
-
-/**
- * Basic theme initialization (fallback)
- */
-function initializeBasicTheme() {
-    console.log('🎨 ARK: Using basic theme initialization');
-    
+function initializeTheme() {
     const savedTheme = localStorage.getItem('ark-theme');
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     
@@ -317,15 +177,6 @@ function initializeBasicTheme() {
             applyTheme(e.matches ? 'dark' : 'light');
         }
     });
-}
-
-/**
- * Apply theme to document
- */
-function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.className = document.body.className.replace(/theme-\w+/g, '');
-    document.body.classList.add(`theme-${theme}`);
 }
 
 /**
@@ -434,13 +285,6 @@ function setupEventListeners() {
         console.warn('⚠️ ARK: Test notification button not found');
     }
     
-    const refreshAIStatusBtn = document.getElementById('refresh-ai-status');
-    if (refreshAIStatusBtn) {
-        refreshAIStatusBtn.addEventListener('click', handleRefreshAIStatus);
-    } else {
-        console.warn('⚠️ ARK: Refresh AI status button not found');
-    }
-    
     const themeSelect = document.getElementById('app-theme');
     if (themeSelect) {
         themeSelect.addEventListener('change', handleThemeChange);
@@ -503,7 +347,7 @@ function setupEventListeners() {
     
     const dismissInstall = document.getElementById('dismiss-install');
     if (dismissInstall) {
-        dismissInstall.addEventListener('click', handleDismissInstallPrompt);
+        dismissInstall.addEventListener('click', handleDismissInstall);
     } else {
         console.warn('⚠️ ARK: Dismiss install button not found');
     }
@@ -522,31 +366,25 @@ function setupEventListeners() {
 async function checkUserStatus() {
     console.log('👤 ARK: Starting user status check...');
     try {
-        // Initialize profile manager
-        const hasProfile = await profileManager.init();
+        const userId = localStorage.getItem('ark-user-id');
+        console.log('👤 ARK: User ID from localStorage:', userId);
         
-        if (hasProfile) {
+        if (userId) {
             console.log('👤 ARK: Existing user found, loading profile...');
-            AppState.user = profileManager.getCurrentProfile();
+            // Load existing user profile
+            AppState.user = await loadUserProfile(userId);
             console.log('👤 ARK: User profile loaded:', AppState.user);
         } else {
             console.log('👤 ARK: No existing user, will show profile setup');
-            AppState.user = null;
+            // New user - show profile setup
+            // Don't navigate here, let loadInitialView handle it
         }
         console.log('✅ ARK: User status check completed successfully');
     } catch (error) {
         console.error('❌ ARK: Error checking user status:', error);
         console.error('📊 ARK: Error stack:', error.stack);
-        
-        // Try to recover from corruption
-        const recovered = await profileManager.recoverFromCorruption();
-        if (recovered) {
-            AppState.user = profileManager.getCurrentProfile();
-            console.log('🔄 ARK: Profile recovered successfully');
-        } else {
-            console.log('🔄 ARK: Continuing with onboarding flow');
-            AppState.user = null;
-        }
+        // Continue with anonymous usage
+        console.log('🔄 ARK: Continuing with anonymous usage');
     }
 }
 
@@ -835,8 +673,6 @@ async function loadViewData(viewName) {
                 break;
             case 'settings':
                 await loadUserSettings();
-                // Also check AI status when settings are loaded
-                await checkAIStatus();
                 break;
             case 'profile-setup':
                 await loadProfileSetup();
@@ -849,94 +685,72 @@ async function loadViewData(viewName) {
 }
 
 /**
- * Load today's quote - Optimized for performance with reliable API client
+ * Load today's quote
  */
 async function loadTodaysQuote() {
-    console.log('📅 ARK: Starting optimized quote load...');
+    console.log('📅 ARK: Starting to load today\'s quote...');
     
     if (!AppState.user) {
         console.log('📅 ARK: No user found, skipping quote load');
         return;
     }
     
-    const startTime = performance.now();
-    
     try {
-        // Start performance measurement
-        if (typeof performanceMonitor !== 'undefined') {
-            performanceMonitor.startTiming('quote-load');
-        }
-        
-        // Show loading state immediately
+        console.log('📅 ARK: Showing loading state...');
         showLoadingState();
         
-        // Try cache first for immediate display (performance optimization)
-        console.log('📅 ARK: Checking cache first for immediate display...');
+        console.log('📅 ARK: Checking online status:', AppState.isOnline);
+        // Try to fetch from API first
+        if (AppState.isOnline) {
+            console.log('📅 ARK: Online - attempting to fetch from API...');
+            console.log('📅 ARK: API URL:', `${API_BASE_URL}/quotes/today`);
+            
+            const authToken = localStorage.getItem('ark-auth-token');
+            console.log('📅 ARK: Auth token:', authToken ? 'Present' : 'Missing');
+            
+            const response = await fetch(`${API_BASE_URL}/quotes/today`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('📅 ARK: API response status:', response.status);
+            console.log('📅 ARK: API response ok:', response.ok);
+            
+            if (response.ok) {
+                const quote = await response.json();
+                console.log('📅 ARK: Quote received from API:', quote);
+                displayQuote(quote);
+                AppState.currentQuote = quote;
+                
+                // Cache the quote for offline use
+                cacheQuote(quote);
+                hideLoadingState();
+                console.log('✅ ARK: Today\'s quote loaded successfully from API');
+                return;
+            } else {
+                console.log('⚠️ ARK: API request failed, trying fallbacks...');
+            }
+        } else {
+            console.log('📅 ARK: Offline - skipping API request');
+        }
+        
+        console.log('📅 ARK: Trying cached quote...');
+        // Fallback to cached quote if API fails or offline
         const cachedQuote = getCachedTodaysQuote();
+        console.log('📅 ARK: Cached quote:', cachedQuote);
         
         if (cachedQuote) {
-            // Display cached quote immediately for better perceived performance
             displayQuote(cachedQuote);
             AppState.currentQuote = cachedQuote;
             hideLoadingState();
-            console.log('✅ ARK: Cached quote displayed immediately');
-            
-            // If online, still try to fetch fresh quote in background
-            if (AppState.isOnline) {
-                fetchFreshQuoteInBackground();
-            }
-            
-            const loadTime = performance.now() - startTime;
-            console.log(`📅 ARK: Quote loaded from cache in ${loadTime.toFixed(2)}ms`);
-            
-            if (typeof performanceMonitor !== 'undefined') {
-                performanceMonitor.endTiming('quote-load');
-            }
-            
+            console.log('✅ ARK: Today\'s quote loaded from cache');
             return;
         }
         
-        // No cache available, try API with reliable client
-        if (AppState.isOnline) {
-            console.log('📅 ARK: No cache, fetching from API with reliable client...');
-            
-            try {
-                // Use the new API client with built-in timeout and retry
-                const quote = await api.getTodaysQuote();
-                
-                // Normalize the quote format
-                const normalizedQuote = {
-                    id: quote.id,
-                    content: quote.text || quote.content,
-                    author: quote.author,
-                    date: quote.date || formatDate(new Date()),
-                    theme: quote.theme,
-                    generated: quote.generated || false
-                };
-                
-                displayQuote(normalizedQuote);
-                AppState.currentQuote = normalizedQuote;
-                
-                // Cache the quote for future use
-                cacheQuote(normalizedQuote);
-                hideLoadingState();
-                
-                const loadTime = performance.now() - startTime;
-                console.log(`✅ ARK: Fresh quote loaded from API in ${loadTime.toFixed(2)}ms`);
-                
-                if (typeof performanceMonitor !== 'undefined') {
-                    performanceMonitor.endTiming('quote-load');
-                }
-                
-                return;
-            } catch (fetchError) {
-                console.log('⚠️ ARK: API fetch failed with reliable client:', fetchError.message);
-                // Continue to fallback
-            }
-        }
-        
-        // Final fallback to default inspirational quote
-        console.log('📅 ARK: Using fallback quote...');
+        console.log('📅 ARK: No cached quote, using fallback...');
+        // Final fallback to a default inspirational quote
         const fallbackQuote = {
             id: 'fallback-' + new Date().toDateString(),
             content: "Jeder Tag ist ein neuer Anfang. Atme tief durch, lächle und fang noch einmal an.",
@@ -946,65 +760,17 @@ async function loadTodaysQuote() {
             isOffline: true
         };
         
+        console.log('📅 ARK: Using fallback quote:', fallbackQuote);
         displayQuote(fallbackQuote);
         AppState.currentQuote = fallbackQuote;
         hideLoadingState();
-        
-        const loadTime = performance.now() - startTime;
-        console.log(`✅ ARK: Fallback quote displayed in ${loadTime.toFixed(2)}ms`);
-        
-        if (typeof performanceMonitor !== 'undefined') {
-            performanceMonitor.endTiming('quote-load');
-        }
-        
-        // Show offline indicator
-        if (!AppState.isOnline) {
-            showOfflineIndicator();
-        }
+        console.log('✅ ARK: Fallback quote displayed');
         
     } catch (error) {
         console.error('❌ ARK: Error loading today\'s quote:', error);
+        console.error('📊 ARK: Error stack:', error.stack);
         hideLoadingState();
-        showQuoteError('Failed to load today\'s quote. Please check your connection and try again.');
-        
-        if (typeof performanceMonitor !== 'undefined') {
-            performanceMonitor.endTiming('quote-load');
-        }
-    }
-}
-
-/**
- * Fetch fresh quote in background using reliable API client
- */
-async function fetchFreshQuoteInBackground() {
-    try {
-        console.log('🔄 ARK: Fetching fresh quote in background...');
-        
-        // Use API client with shorter timeout for background fetch
-        const quote = await api.getTodaysQuote();
-        
-        // Check if this is different from currently displayed quote
-        if (AppState.currentQuote && quote.id !== AppState.currentQuote.id) {
-            console.log('🔄 ARK: Fresh quote available, updating cache');
-            
-            const normalizedQuote = {
-                id: quote.id,
-                content: quote.text || quote.content,
-                author: quote.author,
-                date: quote.date || formatDate(new Date()),
-                theme: quote.theme,
-                generated: quote.generated || false
-            };
-            
-            // Update cache with fresh quote
-            cacheQuote(normalizedQuote);
-            
-            // Optionally show a subtle notification that fresh content is available
-            // (Don't auto-update to avoid jarring the user)
-        }
-    } catch (error) {
-        // Silently fail for background fetch
-        console.log('🔄 ARK: Background quote fetch failed (non-critical):', error.message);
+        showError('Failed to load today\'s quote');
     }
 }
 
@@ -1012,13 +778,8 @@ async function fetchFreshQuoteInBackground() {
  * Display quote in the UI
  */
 function displayQuote(quote) {
-    console.log('📝 ARK: Displaying quote:', quote);
-    
-    // Handle both 'content' and 'text' properties for backward compatibility
-    const quoteText = quote.content || quote.text || '';
-    
     if (elements.quote.text) {
-        elements.quote.text.textContent = quoteText;
+        elements.quote.text.textContent = quote.content || quote.text;
     } else {
         console.warn('⚠️ ARK: Quote text element not found');
     }
@@ -1030,13 +791,13 @@ function displayQuote(quote) {
     }
     
     if (elements.quote.date) {
-        elements.quote.date.textContent = quote.date || formatDate(new Date());
+        elements.quote.date.textContent = quote.date;
     } else {
         console.warn('⚠️ ARK: Quote date element not found');
     }
     
     // Show theme with AI indicator if generated
-    let themeText = quote.theme || 'Daily Inspiration';
+    let themeText = quote.theme || '';
     if (quote.generated) {
         themeText += ' 🤖 KI-generiert';
     }
@@ -1054,65 +815,55 @@ function displayQuote(quote) {
     
     // Load existing feedback if any
     loadExistingFeedback(quote.id);
-    
-    console.log('✅ ARK: Quote displayed successfully');
 }
 
 /**
- * Submit feedback for current quote using reliable API client
+ * Submit feedback for current quote
  */
 async function submitFeedback(rating) {
-    console.log('👍 ARK: Submitting feedback:', rating, 'for quote:', AppState.currentQuote?.id);
-    
-    if (!AppState.currentQuote) {
-        console.warn('⚠️ ARK: No current quote to provide feedback for');
-        return;
-    }
+    if (!AppState.currentQuote) return;
     
     try {
         // Update UI immediately for better UX
         updateFeedbackUI(rating);
         
-        if (AppState.isOnline) {
-            console.log('👍 ARK: Online - attempting to submit to API...');
-            
-            try {
-                // Use reliable API client
-                const result = await api.submitFeedback(AppState.currentQuote.id, rating);
-                
-                console.log('✅ ARK: Feedback submitted successfully to API');
-                // Remove from pending feedback if it was there
-                removePendingFeedback(AppState.currentQuote.id);
-                showToast('Feedback submitted successfully!', 2000);
-                return;
-            } catch (apiError) {
-                console.log('⚠️ ARK: API submission failed, storing locally:', apiError.message);
-            }
-        } else {
-            console.log('👍 ARK: Offline - storing feedback locally');
-        }
-        
-        // Store feedback locally for offline support or API failure
         const feedbackData = {
             quoteId: AppState.currentQuote.id,
             rating: rating,
             timestamp: new Date().toISOString()
         };
         
+        if (AppState.isOnline) {
+            // Try to submit to API
+            const response = await fetch(`${API_BASE_URL}/quotes/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('ark-auth-token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(feedbackData)
+            });
+            
+            if (response.ok) {
+                console.log('ARK: Feedback submitted successfully');
+                // Remove from pending feedback if it was there
+                removePendingFeedback(AppState.currentQuote.id);
+                return;
+            }
+        }
+        
+        // Store feedback locally for offline support or API failure
         storeFeedbackLocally(feedbackData);
-        console.log('✅ ARK: Feedback stored locally for sync');
-        showToast('Feedback saved (will sync when online)', 3000);
+        console.log('ARK: Feedback stored locally for sync');
         
     } catch (error) {
-        console.error('❌ ARK: Error submitting feedback:', error);
+        console.error('ARK: Error submitting feedback:', error);
         // Still store locally as fallback
-        const fallbackFeedback = {
+        storeFeedbackLocally({
             quoteId: AppState.currentQuote.id,
             rating: rating,
             timestamp: new Date().toISOString()
-        };
-        storeFeedbackLocally(fallbackFeedback);
-        showToast('Feedback saved locally', 3000);
+        });
     }
 }
 
@@ -1120,40 +871,15 @@ async function submitFeedback(rating) {
  * Load existing feedback for a quote
  */
 function loadExistingFeedback(quoteId) {
-    console.log('🔍 ARK: Loading existing feedback for quote:', quoteId);
+    // Check local storage for existing feedback
+    const pendingFeedback = JSON.parse(localStorage.getItem('ark-pending-feedback') || '[]');
+    const existingFeedback = pendingFeedback.find(f => f.quoteId === quoteId);
     
-    try {
-        // Check local storage for existing feedback
-        const pendingFeedback = JSON.parse(localStorage.getItem('ark-pending-feedback') || '[]');
-        const existingFeedback = pendingFeedback.find(f => f.quoteId === quoteId);
-        
-        if (existingFeedback) {
-            console.log('✅ ARK: Found existing feedback:', existingFeedback.rating);
-            updateFeedbackUI(existingFeedback.rating);
-        } else {
-            console.log('📝 ARK: No existing feedback found, clearing UI');
-            // Clear any previous feedback UI state
-            clearFeedbackUI();
-        }
-    } catch (error) {
-        console.error('❌ ARK: Error loading existing feedback:', error);
+    if (existingFeedback) {
+        updateFeedbackUI(existingFeedback.rating);
+    } else {
+        // Clear any previous feedback UI state
         clearFeedbackUI();
-    }
-}
-
-/**
- * Remove pending feedback for a quote
- */
-function removePendingFeedback(quoteId) {
-    console.log('🗑️ ARK: Removing pending feedback for quote:', quoteId);
-    
-    try {
-        const pendingFeedback = JSON.parse(localStorage.getItem('ark-pending-feedback') || '[]');
-        const filteredFeedback = pendingFeedback.filter(f => f.quoteId !== quoteId);
-        localStorage.setItem('ark-pending-feedback', JSON.stringify(filteredFeedback));
-        console.log('✅ ARK: Pending feedback removed successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error removing pending feedback:', error);
     }
 }
 
@@ -1161,71 +887,30 @@ function removePendingFeedback(quoteId) {
  * Clear feedback UI state
  */
 function clearFeedbackUI() {
-    console.log('🧹 ARK: Clearing feedback UI state');
-    
-    try {
-        Object.values(elements.feedback).forEach(btn => {
-            if (btn) {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-pressed', 'false');
-            }
-        });
-        console.log('✅ ARK: Feedback UI cleared successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error clearing feedback UI:', error);
-    }
+    Object.values(elements.feedback).forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 /**
  * Cache quote for offline use
  */
 function cacheQuote(quote) {
-    console.log('💾 ARK: Caching quote:', quote.id);
-    
-    try {
-        const today = new Date().toDateString();
-        const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
-        
-        // Ensure quote has all required fields
-        const quoteToCahe = {
-            id: quote.id,
-            content: quote.content || quote.text,
-            author: quote.author,
-            date: quote.date || formatDate(new Date()),
-            theme: quote.theme,
-            generated: quote.generated || false,
-            cachedAt: new Date().toISOString()
-        };
-        
-        cachedQuotes[today] = quoteToCahe;
-        localStorage.setItem('ark-cached-quotes', JSON.stringify(cachedQuotes));
-        
-        console.log('✅ ARK: Quote cached successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error caching quote:', error);
-    }
+    const today = new Date().toDateString();
+    const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
+    cachedQuotes[today] = quote;
+    localStorage.setItem('ark-cached-quotes', JSON.stringify(cachedQuotes));
 }
 
 /**
  * Get cached quote for today
  */
 function getCachedTodaysQuote() {
-    try {
-        const today = new Date().toDateString();
-        const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
-        const cachedQuote = cachedQuotes[today];
-        
-        if (cachedQuote) {
-            console.log('📦 ARK: Found cached quote for today');
-            return cachedQuote;
-        }
-        
-        console.log('📦 ARK: No cached quote found for today');
-        return null;
-    } catch (error) {
-        console.error('❌ ARK: Error retrieving cached quote:', error);
-        return null;
-    }
+    const today = new Date().toDateString();
+    const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
+    return cachedQuotes[today];
 }
 
 /**
@@ -1241,11 +926,8 @@ function removePendingFeedback(quoteId) {
  * Show loading state
  */
 function showLoadingState() {
-    console.log('⏳ ARK: Showing loading state...');
-    
     if (elements.quote.text) {
         elements.quote.text.textContent = 'Loading your daily inspiration...';
-        elements.quote.text.classList.add('loading');
     }
     if (elements.quote.author) {
         elements.quote.author.textContent = '';
@@ -1254,196 +936,42 @@ function showLoadingState() {
         elements.quote.date.textContent = '';
     }
     if (elements.quote.theme) {
-        elements.quote.theme.textContent = 'Loading...';
+        elements.quote.theme.textContent = '';
     }
-    
-    // Disable feedback buttons during loading
-    Object.values(elements.feedback).forEach(btn => {
-        if (btn) {
-            btn.disabled = true;
-            btn.classList.remove('active');
-        }
-    });
-    
-    console.log('✅ ARK: Loading state displayed');
+    clearFeedbackUI();
 }
 
 /**
  * Hide loading state
  */
 function hideLoadingState() {
-    console.log('✅ ARK: Hiding loading state...');
-    
-    if (elements.quote.text) {
-        elements.quote.text.classList.remove('loading');
-    }
-    
-    // Re-enable feedback buttons
-    Object.values(elements.feedback).forEach(btn => {
-        if (btn) {
-            btn.disabled = false;
-        }
-    });
-    
-    console.log('✅ ARK: Loading state hidden');
-}
-
-/**
- * Show offline indicator
- */
-function showOfflineIndicator() {
-    console.log('📴 ARK: Showing offline indicator');
-    if (elements.offlineBanner) {
-        elements.offlineBanner.classList.remove('hidden');
-    }
-}
-
-/**
- * Ensure offline content is available
- */
-function ensureOfflineContent() {
-    console.log('📦 ARK: Ensuring offline content is available');
-    
-    try {
-        // Check if we have cached quotes
-        const cachedQuotes = getCachedQuotes();
-        console.log('📦 ARK: Found', cachedQuotes.length, 'cached quotes');
-        
-        // Check if we have today's quote cached
-        const todayQuote = getCachedTodaysQuote();
-        if (!todayQuote) {
-            console.log('📦 ARK: No today\'s quote cached, creating fallback');
-            
-            // Create a fallback quote for today
-            const fallbackQuote = {
-                id: 'offline-fallback-' + new Date().toDateString(),
-                content: "Auch offline bleibst du stark. Jeder Moment ist eine Chance zu wachsen.",
-                author: "ARK Offline",
-                date: formatDate(new Date()),
-                theme: "Offline Inspiration",
-                isOffline: true,
-                cachedAt: new Date().toISOString()
-            };
-            
-            // Cache the fallback quote
-            cacheQuote(fallbackQuote);
-            console.log('📦 ARK: Fallback quote cached for offline use');
-        }
-        
-        // Ensure we have some archive content
-        if (cachedQuotes.length === 0) {
-            console.log('📦 ARK: No cached archive, creating sample offline quotes');
-            const offlineQuotes = getSampleArchiveQuotes();
-            
-            // Cache sample quotes for offline browsing
-            offlineQuotes.forEach(quote => {
-                const offlineQuote = {
-                    ...quote,
-                    isOffline: true,
-                    cachedAt: new Date().toISOString()
-                };
-                cacheQuote(offlineQuote);
-            });
-            
-            console.log('📦 ARK: Sample quotes cached for offline browsing');
-        }
-        
-        console.log('✅ ARK: Offline content ensured');
-        
-    } catch (error) {
-        console.error('❌ ARK: Error ensuring offline content:', error);
-    }
-}
-
-/**
- * Get offline-ready fallback quotes
- */
-function getOfflineFallbackQuotes() {
-    return [
-        {
-            id: 'offline-1',
-            content: "Auch ohne Verbindung zur Welt bleibst du mit dir selbst verbunden.",
-            author: "ARK Offline",
-            date: formatDate(new Date()),
-            theme: "Offline Weisheit",
-            isOffline: true
-        },
-        {
-            id: 'offline-2', 
-            content: "Stille Momente offline sind oft die lautesten für die Seele.",
-            author: "ARK Offline",
-            date: formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000)),
-            theme: "Innere Ruhe",
-            isOffline: true
-        },
-        {
-            id: 'offline-3',
-            content: "Deine Gedanken brauchen kein Internet, um kraftvoll zu sein.",
-            author: "ARK Offline", 
-            date: formatDate(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
-            theme: "Mentale Stärke",
-            isOffline: true
-        }
-    ];
-}
-
-/**
- * Show quote-specific error message
- */
-function showQuoteError(message) {
-    console.error('❌ ARK: Quote Error:', message);
-    
-    if (elements.quote.text) {
-        elements.quote.text.textContent = 'Unable to load quote';
-        elements.quote.text.classList.add('error');
-    }
-    if (elements.quote.author) {
-        elements.quote.author.textContent = '';
-    }
-    if (elements.quote.date) {
-        elements.quote.date.textContent = formatDate(new Date());
-    }
-    if (elements.quote.theme) {
-        elements.quote.theme.textContent = 'Error - Please try again';
-    }
-    
-    // Show error toast
-    showToast(message, 5000);
+    // Loading state is cleared when quote is displayed
 }
 
 /**
  * Update feedback button states
  */
 function updateFeedbackUI(selectedRating) {
-    console.log('🎨 ARK: Updating feedback UI for rating:', selectedRating);
-    
-    try {
-        // Remove active class from all buttons
-        Object.values(elements.feedback).forEach(btn => {
-            if (btn) {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-pressed', 'false');
-            }
-        });
-        
-        // Add active class to selected button
-        if (elements.feedback[selectedRating]) {
-            elements.feedback[selectedRating].classList.add('active');
-            elements.feedback[selectedRating].setAttribute('aria-pressed', 'true');
-            console.log('✅ ARK: Feedback UI updated successfully');
-        } else {
-            console.warn(`⚠️ ARK: Feedback button '${selectedRating}' not found`);
+    // Remove active class from all buttons
+    Object.values(elements.feedback).forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
         }
-    } catch (error) {
-        console.error('❌ ARK: Error updating feedback UI:', error);
+    });
+    
+    // Add active class to selected button
+    if (elements.feedback[selectedRating]) {
+        elements.feedback[selectedRating].classList.add('active');
+    } else {
+        console.warn(`⚠️ ARK: Feedback button '${selectedRating}' not found`);
     }
 }
 
 /**
- * Load quote archive
+ * Load quote archive (placeholder)
  */
 async function loadQuoteArchive() {
-    console.log('📚 ARK: Loading quote archive...');
+    console.log('ARK: Loading quote archive...');
     
     try {
         showArchiveLoading();
@@ -1452,65 +980,39 @@ async function loadQuoteArchive() {
         
         // Try to fetch from API first
         if (AppState.isOnline && AppState.user) {
-            console.log('📚 ARK: Online - attempting to fetch archive from API...');
             try {
-                const response = await fetch(`${API_BASE_URL}/api/archive`, {
+                const response = await fetch(`${API_BASE_URL}/quotes/archive`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('ark-auth-token')}`,
                         'Content-Type': 'application/json'
                     }
                 });
                 
-                console.log('📚 ARK: Archive API response status:', response.status);
-                
                 if (response.ok) {
-                    const data = await response.json();
-                    quotes = data.quotes || data || [];
-                    console.log('📚 ARK: Loaded', quotes.length, 'quotes from API');
-                } else {
-                    console.log('⚠️ ARK: Archive API request failed');
+                    quotes = await response.json();
                 }
             } catch (error) {
-                console.error('❌ ARK: Error fetching archive from API:', error);
+                console.error('ARK: Error fetching archive from API:', error);
             }
-        } else {
-            console.log('📚 ARK: Offline or no user - skipping API request');
         }
         
         // Fallback to cached quotes if API fails or offline
         if (quotes.length === 0) {
-            console.log('📚 ARK: Trying cached quotes...');
             quotes = getCachedQuotes();
-            console.log('📚 ARK: Loaded', quotes.length, 'cached quotes');
         }
         
         // If still no quotes, show sample data for demo
         if (quotes.length === 0) {
-            console.log('📚 ARK: No cached quotes, using sample data');
             quotes = getSampleArchiveQuotes();
         }
         
-        // Normalize quote format
-        quotes = quotes.map(quote => ({
-            id: quote.id,
-            content: quote.content || quote.text,
-            author: quote.author,
-            date: quote.date,
-            theme: quote.theme,
-            generated: quote.generated || false,
-            feedback: quote.feedback || null
-        }));
-        
-        console.log('📚 ARK: Displaying', quotes.length, 'quotes in archive');
         displayArchive(quotes);
         setupArchiveFilters(quotes);
         setupArchiveSearch(quotes);
         
-        console.log('✅ ARK: Quote archive loaded successfully');
-        
     } catch (error) {
-        console.error('❌ ARK: Error loading quote archive:', error);
-        showArchiveError('Failed to load quote archive. Please try again.');
+        console.error('ARK: Error loading quote archive:', error);
+        showError('Failed to load quote archive');
     }
 }
 
@@ -1518,13 +1020,8 @@ async function loadQuoteArchive() {
  * Display archive quotes
  */
 function displayArchive(quotes) {
-    console.log('📋 ARK: Displaying archive with', quotes.length, 'quotes');
-    
     const archiveList = document.getElementById('archive-list');
-    if (!archiveList) {
-        console.error('❌ ARK: Archive list element not found');
-        return;
-    }
+    if (!archiveList) return;
     
     if (quotes.length === 0) {
         archiveList.innerHTML = `
@@ -1533,234 +1030,130 @@ function displayArchive(quotes) {
                 <p>Visit the daily quote to start building your collection!</p>
             </div>
         `;
-        console.log('📋 ARK: Displayed empty archive message');
         return;
     }
     
-    try {
-        // Sort quotes by date (newest first)
-        const sortedQuotes = quotes.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            return dateB - dateA;
-        });
-        
-        archiveList.innerHTML = sortedQuotes.map(quote => {
-            const quoteContent = quote.content || quote.text || 'No content';
-            const quoteAuthor = quote.author ? `— ${quote.author}` : '';
-            const quoteDate = formatArchiveDate(quote.date);
-            const quoteTheme = quote.theme || '';
-            const feedbackEmoji = quote.feedback ? getFeedbackEmoji(quote.feedback.rating) : '';
-            
-            return `
-                <article class="archive-item" data-quote-id="${quote.id}" data-theme="${quoteTheme}" data-date="${quote.date}">
-                    <div class="archive-quote-content">
-                        <blockquote class="archive-quote-text">${quoteContent}</blockquote>
-                        ${quoteAuthor ? `<cite class="archive-quote-author">${quoteAuthor}</cite>` : ''}
-                    </div>
-                    <div class="archive-quote-meta">
-                        <span class="archive-quote-date">${quoteDate}</span>
-                        ${quoteTheme ? `<span class="archive-quote-theme">${quoteTheme}</span>` : ''}
-                        ${feedbackEmoji ? `<span class="archive-quote-feedback" title="Your feedback: ${quote.feedback.rating}">${feedbackEmoji}</span>` : ''}
-                        ${quote.generated ? '<span class="archive-quote-ai" title="AI Generated">🤖</span>' : ''}
-                    </div>
-                </article>
-            `;
-        }).join('');
-        
-        // Add click handlers for quote items
-        archiveList.querySelectorAll('.archive-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const quoteId = item.dataset.quoteId;
-                const quote = sortedQuotes.find(q => q.id === quoteId);
-                if (quote) {
-                    showQuoteDetail(quote);
-                }
-            });
-        });
-        
-        console.log('✅ ARK: Archive displayed successfully');
-        
-    } catch (error) {
-        console.error('❌ ARK: Error displaying archive:', error);
-        archiveList.innerHTML = `
-            <div class="archive-error">
-                <p>Error displaying quotes. Please refresh and try again.</p>
+    // Sort quotes by date (newest first)
+    const sortedQuotes = quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    archiveList.innerHTML = sortedQuotes.map(quote => `
+        <article class="archive-item" data-quote-id="${quote.id}" data-theme="${quote.theme || ''}" data-date="${quote.date}">
+            <div class="archive-quote-content">
+                <blockquote class="archive-quote-text">${quote.content}</blockquote>
+                ${quote.author ? `<cite class="archive-quote-author">— ${quote.author}</cite>` : ''}
             </div>
-        `;
-    }
+            <div class="archive-quote-meta">
+                <span class="archive-quote-date">${formatArchiveDate(quote.date)}</span>
+                ${quote.theme ? `<span class="archive-quote-theme">${quote.theme}</span>` : ''}
+                ${quote.feedback ? `<span class="archive-quote-feedback" title="Your feedback: ${quote.feedback.rating}">${getFeedbackEmoji(quote.feedback.rating)}</span>` : ''}
+            </div>
+        </article>
+    `).join('');
+    
+    // Add click handlers for quote items
+    archiveList.querySelectorAll('.archive-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const quoteId = item.dataset.quoteId;
+            showQuoteDetail(quotes.find(q => q.id === quoteId));
+        });
+    });
 }
 
 /**
  * Setup archive filters
  */
 function setupArchiveFilters(quotes) {
-    console.log('🔧 ARK: Setting up archive filters');
-    
     const themeFilter = document.getElementById('theme-filter');
     const dateFilter = document.getElementById('date-filter');
     
-    if (!themeFilter || !dateFilter) {
-        console.warn('⚠️ ARK: Archive filter elements not found');
-        return;
-    }
+    if (!themeFilter || !dateFilter) return;
     
-    try {
-        // Populate theme filter
-        const themes = [...new Set(quotes.map(q => q.theme).filter(Boolean))];
-        themeFilter.innerHTML = '<option value="">All Themes</option>' + 
-            themes.map(theme => `<option value="${theme}">${theme}</option>`).join('');
-        
-        // Remove existing event listeners to avoid duplicates
-        themeFilter.removeEventListener('change', handleArchiveFilter);
-        dateFilter.removeEventListener('change', handleArchiveFilter);
-        
-        // Add filter event listeners
-        themeFilter.addEventListener('change', () => filterArchive(quotes));
-        dateFilter.addEventListener('change', () => filterArchive(quotes));
-        
-        console.log('✅ ARK: Archive filters set up successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error setting up archive filters:', error);
-    }
+    // Populate theme filter
+    const themes = [...new Set(quotes.map(q => q.theme).filter(Boolean))];
+    themeFilter.innerHTML = '<option value="">All Themes</option>' + 
+        themes.map(theme => `<option value="${theme}">${theme}</option>`).join('');
+    
+    // Add filter event listeners
+    themeFilter.addEventListener('change', () => filterArchive(quotes));
+    dateFilter.addEventListener('change', () => filterArchive(quotes));
 }
 
 /**
  * Setup archive search
  */
 function setupArchiveSearch(quotes) {
-    console.log('🔍 ARK: Setting up archive search');
-    
     const searchInput = document.getElementById('archive-search');
     const searchBtn = document.getElementById('search-btn');
     
-    if (!searchInput || !searchBtn) {
-        console.warn('⚠️ ARK: Archive search elements not found');
-        return;
-    }
+    if (!searchInput || !searchBtn) return;
     
-    try {
-        const performSearch = debounce(() => {
+    const performSearch = debounce(() => {
+        filterArchive(quotes);
+    }, 300);
+    
+    searchInput.addEventListener('input', performSearch);
+    searchBtn.addEventListener('click', () => filterArchive(quotes));
+    
+    // Handle Enter key in search
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
             filterArchive(quotes);
-        }, 300);
-        
-        // Remove existing event listeners to avoid duplicates
-        searchInput.removeEventListener('input', performSearch);
-        searchBtn.removeEventListener('click', handleArchiveSearch);
-        
-        // Add search event listeners
-        searchInput.addEventListener('input', performSearch);
-        searchBtn.addEventListener('click', () => filterArchive(quotes));
-        
-        // Handle Enter key in search
-        searchInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                filterArchive(quotes);
-            }
-        });
-        
-        console.log('✅ ARK: Archive search set up successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error setting up archive search:', error);
-    }
+        }
+    });
 }
 
 /**
  * Filter archive based on current filter settings
  */
 function filterArchive(allQuotes) {
-    console.log('🔍 ARK: Filtering archive with', allQuotes.length, 'total quotes');
+    const searchTerm = document.getElementById('archive-search')?.value.toLowerCase() || '';
+    const themeFilter = document.getElementById('theme-filter')?.value || '';
+    const dateFilter = document.getElementById('date-filter')?.value || '';
     
-    try {
-        const searchTerm = document.getElementById('archive-search')?.value.toLowerCase().trim() || '';
-        const themeFilter = document.getElementById('theme-filter')?.value || '';
-        const dateFilter = document.getElementById('date-filter')?.value || '';
-        
-        console.log('🔍 ARK: Filter criteria - search:', searchTerm, 'theme:', themeFilter, 'date:', dateFilter);
-        
-        let filteredQuotes = [...allQuotes]; // Create a copy to avoid mutating original
-        
-        // Apply search filter
-        if (searchTerm) {
-            filteredQuotes = filteredQuotes.filter(quote => {
-                const content = (quote.content || quote.text || '').toLowerCase();
-                const author = (quote.author || '').toLowerCase();
-                const theme = (quote.theme || '').toLowerCase();
-                
-                return content.includes(searchTerm) ||
-                       author.includes(searchTerm) ||
-                       theme.includes(searchTerm);
-            });
-            console.log('🔍 ARK: After search filter:', filteredQuotes.length, 'quotes');
-        }
-        
-        // Apply theme filter
-        if (themeFilter) {
-            filteredQuotes = filteredQuotes.filter(quote => quote.theme === themeFilter);
-            console.log('🔍 ARK: After theme filter:', filteredQuotes.length, 'quotes');
-        }
-        
-        // Apply date filter
-        if (dateFilter) {
-            const now = new Date();
-            filteredQuotes = filteredQuotes.filter(quote => {
-                const quoteDate = new Date(quote.date);
-                const timeDiff = now - quoteDate;
-                
-                switch (dateFilter) {
-                    case 'week':
-                        return timeDiff <= 7 * 24 * 60 * 60 * 1000;
-                    case 'month':
-                        return timeDiff <= 30 * 24 * 60 * 60 * 1000;
-                    case 'year':
-                        return timeDiff <= 365 * 24 * 60 * 60 * 1000;
-                    default:
-                        return true;
-                }
-            });
-            console.log('🔍 ARK: After date filter:', filteredQuotes.length, 'quotes');
-        }
-        
-        console.log('✅ ARK: Filtering complete, displaying', filteredQuotes.length, 'quotes');
-        displayArchive(filteredQuotes);
-        
-    } catch (error) {
-        console.error('❌ ARK: Error filtering archive:', error);
-        // Fallback to showing all quotes
-        displayArchive(allQuotes);
+    let filteredQuotes = allQuotes;
+    
+    // Apply search filter
+    if (searchTerm) {
+        filteredQuotes = filteredQuotes.filter(quote => 
+            quote.content.toLowerCase().includes(searchTerm) ||
+            (quote.author && quote.author.toLowerCase().includes(searchTerm)) ||
+            (quote.theme && quote.theme.toLowerCase().includes(searchTerm))
+        );
     }
+    
+    // Apply theme filter
+    if (themeFilter) {
+        filteredQuotes = filteredQuotes.filter(quote => quote.theme === themeFilter);
+    }
+    
+    // Apply date filter
+    if (dateFilter) {
+        const now = new Date();
+        filteredQuotes = filteredQuotes.filter(quote => {
+            const quoteDate = new Date(quote.date);
+            switch (dateFilter) {
+                case 'week':
+                    return (now - quoteDate) <= 7 * 24 * 60 * 60 * 1000;
+                case 'month':
+                    return (now - quoteDate) <= 30 * 24 * 60 * 60 * 1000;
+                case 'year':
+                    return (now - quoteDate) <= 365 * 24 * 60 * 60 * 1000;
+                default:
+                    return true;
+            }
+        });
+    }
+    
+    displayArchive(filteredQuotes);
 }
 
 /**
  * Get cached quotes from localStorage
  */
 function getCachedQuotes() {
-    console.log('📦 ARK: Retrieving cached quotes');
-    
-    try {
-        const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
-        const quotes = Object.values(cachedQuotes);
-        
-        console.log('📦 ARK: Found', quotes.length, 'cached quotes');
-        
-        // If no cached quotes and we're offline, provide fallback quotes
-        if (quotes.length === 0 && !AppState.isOnline) {
-            console.log('📦 ARK: No cached quotes and offline, using fallback quotes');
-            return getOfflineFallbackQuotes();
-        }
-        
-        return quotes;
-    } catch (error) {
-        console.error('❌ ARK: Error retrieving cached quotes:', error);
-        
-        // Return fallback quotes on error
-        if (!AppState.isOnline) {
-            return getOfflineFallbackQuotes();
-        }
-        
-        return [];
-    }
+    const cachedQuotes = JSON.parse(localStorage.getItem('ark-cached-quotes') || '{}');
+    return Object.values(cachedQuotes);
 }
 
 /**
@@ -1799,8 +1192,6 @@ function getSampleArchiveQuotes() {
  * Show archive loading state
  */
 function showArchiveLoading() {
-    console.log('⏳ ARK: Showing archive loading state');
-    
     const archiveList = document.getElementById('archive-list');
     if (archiveList) {
         archiveList.innerHTML = `
@@ -1810,26 +1201,6 @@ function showArchiveLoading() {
             </div>
         `;
     }
-}
-
-/**
- * Show archive error state
- */
-function showArchiveError(message) {
-    console.error('❌ ARK: Archive Error:', message);
-    
-    const archiveList = document.getElementById('archive-list');
-    if (archiveList) {
-        archiveList.innerHTML = `
-            <div class="archive-error">
-                <p>❌ ${message}</p>
-                <button onclick="loadQuoteArchive()" class="retry-btn">Try Again</button>
-            </div>
-        `;
-    }
-    
-    // Show error toast
-    showToast(message, 5000);
 }
 
 /**
@@ -1879,61 +1250,24 @@ function showQuoteDetail(quote) {
  * Load user settings
  */
 async function loadUserSettings() {
-    console.log('⚙️ ARK: Loading user settings...');
+    console.log('ARK: Loading user settings...');
     
     try {
-        // Load preferences using preferences manager
-        if (preferencesManager) {
-            await preferencesManager.loadPreferences();
-            await preferencesManager.applyPreferences();
-            console.log('✅ ARK: User settings loaded via preferences manager');
-        } else {
-            // Fallback to basic settings loading
-            await loadBasicUserSettings();
-            console.log('✅ ARK: Basic user settings loaded');
+        // Load current notification preferences from server
+        await loadNotificationPreferences();
+        
+        // Load other user preferences
+        await loadUserPreferences();
+        
+        // Initialize notification manager if not already done
+        if (!NotificationManager.isSupported) {
+            await NotificationManager.init();
         }
+        
+        console.log('ARK: User settings loaded successfully');
     } catch (error) {
-        console.error('❌ ARK: Error loading user settings:', error);
-        showToast('Fehler beim Laden der Einstellungen', 3000);
-    }
-}
-
-/**
- * Load basic user settings (fallback)
- */
-async function loadBasicUserSettings() {
-    try {
-        // Load theme
-        const savedTheme = localStorage.getItem('ark-theme') || 'auto';
-        const themeSelect = document.getElementById('app-theme');
-        if (themeSelect) {
-            themeSelect.value = savedTheme;
-        }
-        
-        // Load notification settings
-        const notificationsEnabled = localStorage.getItem('ark-notifications-enabled') === 'true';
-        const notificationTime = localStorage.getItem('ark-notification-time') || '09:00';
-        
-        const notificationToggle = document.getElementById('notifications-enabled');
-        if (notificationToggle) {
-            notificationToggle.checked = notificationsEnabled;
-        }
-        
-        const notificationTimeInput = document.getElementById('notification-time');
-        if (notificationTimeInput) {
-            notificationTimeInput.value = notificationTime;
-        }
-        
-        // Load quote length
-        const quoteLength = localStorage.getItem('ark-quote-length') || 'medium';
-        const quoteLengthSelect = document.getElementById('quote-length');
-        if (quoteLengthSelect) {
-            quoteLengthSelect.value = quoteLength;
-        }
-        
-        console.log('✅ ARK: Basic settings loaded');
-    } catch (error) {
-        console.error('❌ ARK: Error loading basic settings:', error);
+        console.error('ARK: Error loading user settings:', error);
+        showToast('Failed to load settings');
     }
 }
 
@@ -2072,64 +1406,107 @@ function applyTheme(theme) {
  * Handle theme change
  */
 async function handleThemeChange(event) {
-    console.log('🎨 ARK: Theme change requested:', event.target.value);
-    
     const theme = event.target.value;
+    applyTheme(theme);
     
-    try {
-        if (preferencesManager) {
-            await preferencesManager.updatePreference('theme', theme);
-            showToast('Design-Einstellung gespeichert! 🎨', 2000);
-        } else {
-            // Fallback to basic theme application
-            applyTheme(theme);
-            localStorage.setItem('ark-theme', theme);
-            showToast('Design geändert', 2000);
-        }
-    } catch (error) {
-        console.error('❌ ARK: Error changing theme:', error);
-        showToast('Fehler beim Ändern des Designs', 3000);
-    }
+    // Save to server
+    await saveUserPreferences({
+        theme: theme,
+        quoteLength: document.getElementById('quote-length')?.value || 'medium'
+    });
 }
 
 /**
  * Handle quote length preference change
  */
 async function handleQuoteLengthChange(event) {
-    console.log('📏 ARK: Quote length change requested:', event.target.value);
-    
     const quoteLength = event.target.value;
     
-    try {
-        if (preferencesManager) {
-            await preferencesManager.updatePreference('quoteLength', quoteLength);
-            showToast('Spruch-Länge gespeichert! 📏', 2000);
-        } else {
-            // Fallback to localStorage
-            localStorage.setItem('ark-quote-length', quoteLength);
-            showToast('Spruch-Länge geändert', 2000);
-        }
-    } catch (error) {
-        console.error('❌ ARK: Error changing quote length:', error);
-        showToast('Fehler beim Ändern der Spruch-Länge', 3000);
-    }
+    // Save to server
+    await saveUserPreferences({
+        theme: document.getElementById('app-theme')?.value || 'light',
+        quoteLength: quoteLength
+    });
 }
 
 /**
- * Load profile setup
+ * Load profile setup (placeholder)
  */
 async function loadProfileSetup() {
-    console.log('👤 ARK: Loading profile setup...');
+    console.log('ARK: Loading profile setup...');
     
     try {
         const questionnaireForm = document.getElementById('questionnaire-form');
-        if (!questionnaireForm) {
-            console.error('❌ ARK: Questionnaire form element not found');
-            return;
-        }
+        if (!questionnaireForm) return;
         
-        // Get questions from profile manager
-        const questions = profileManager.getQuestionnaireQuestions();
+        // Define questionnaire questions
+        const questions = [
+            {
+                id: 'q1',
+                text: 'What motivates you most in life?',
+                type: 'radio',
+                options: [
+                    { value: 'spirituality', label: 'Spiritual growth and inner peace' },
+                    { value: 'sport', label: 'Physical fitness and athletic achievement' },
+                    { value: 'education', label: 'Learning and intellectual development' },
+                    { value: 'health', label: 'Overall wellness and healthy living' },
+                    { value: 'humor', label: 'Joy, laughter, and positive experiences' },
+                    { value: 'philosophy', label: 'Deep thinking and life\'s big questions' }
+                ]
+            },
+            {
+                id: 'q2',
+                text: 'How do you prefer to start your day?',
+                type: 'radio',
+                options: [
+                    { value: 'spirituality', label: 'Meditation or prayer' },
+                    { value: 'sport', label: 'Exercise or physical activity' },
+                    { value: 'education', label: 'Reading or learning something new' },
+                    { value: 'health', label: 'Healthy breakfast and self-care routine' },
+                    { value: 'humor', label: 'Something fun or entertaining' },
+                    { value: 'philosophy', label: 'Quiet reflection and contemplation' }
+                ]
+            },
+            {
+                id: 'q3',
+                text: 'What type of content resonates with you most?',
+                type: 'radio',
+                options: [
+                    { value: 'spirituality', label: 'Inspirational and uplifting messages' },
+                    { value: 'sport', label: 'Motivational and action-oriented quotes' },
+                    { value: 'education', label: 'Thought-provoking and educational insights' },
+                    { value: 'health', label: 'Wellness tips and healthy living advice' },
+                    { value: 'humor', label: 'Light-hearted and humorous content' },
+                    { value: 'philosophy', label: 'Deep philosophical wisdom' }
+                ]
+            },
+            {
+                id: 'q4',
+                text: 'When facing challenges, you tend to:',
+                type: 'radio',
+                options: [
+                    { value: 'spirituality', label: 'Seek inner strength and faith' },
+                    { value: 'sport', label: 'Push through with determination' },
+                    { value: 'education', label: 'Research and learn from others' },
+                    { value: 'health', label: 'Focus on self-care and balance' },
+                    { value: 'humor', label: 'Find the lighter side of things' },
+                    { value: 'philosophy', label: 'Reflect on the deeper meaning' }
+                ]
+            },
+            {
+                id: 'q5',
+                text: 'What brings you the most fulfillment?',
+                type: 'radio',
+                options: [
+                    { value: 'spirituality', label: 'Connection with something greater' },
+                    { value: 'sport', label: 'Achieving physical goals' },
+                    { value: 'education', label: 'Gaining knowledge and skills' },
+                    { value: 'health', label: 'Feeling energized and well' },
+                    { value: 'humor', label: 'Making others smile and laugh' },
+                    { value: 'philosophy', label: 'Understanding life\'s complexities' }
+                ]
+            }
+        ];
         
         // Generate questionnaire HTML
         questionnaireForm.innerHTML = questions.map((question, index) => `
@@ -2155,29 +1532,23 @@ async function loadProfileSetup() {
             </div>
         `).join('') + `
             <div class="questionnaire-actions">
-                <button type="submit" class="submit-btn primary-btn">Setup abschließen</button>
-                <button type="button" id="skip-setup" class="submit-btn secondary-btn">Vorerst überspringen</button>
+                <button type="submit" class="submit-btn primary-btn">Complete Setup</button>
+                <button type="button" id="skip-setup" class="submit-btn secondary-btn">Skip for Now</button>
             </div>
         `;
         
-        // Remove existing event listeners to avoid duplicates
-        const existingForm = questionnaireForm.cloneNode(true);
-        questionnaireForm.parentNode.replaceChild(existingForm, questionnaireForm);
-        
         // Add form submission handler
-        existingForm.addEventListener('submit', handleQuestionnaireSubmit);
+        questionnaireForm.addEventListener('submit', handleQuestionnaireSubmit);
         
         // Add skip button handler
-        const skipBtn = existingForm.querySelector('#skip-setup');
+        const skipBtn = document.getElementById('skip-setup');
         if (skipBtn) {
             skipBtn.addEventListener('click', handleSkipSetup);
         }
         
-        console.log('✅ ARK: Profile setup loaded successfully');
-        
     } catch (error) {
-        console.error('❌ ARK: Error loading profile setup:', error);
-        showError('Fehler beim Laden der Profil-Einrichtung. Bitte lade die Seite neu.');
+        console.error('ARK: Error loading profile setup:', error);
+        showError('Failed to load profile setup');
     }
 }
 
@@ -2186,8 +1557,6 @@ async function loadProfileSetup() {
  */
 async function handleQuestionnaireSubmit(event) {
     event.preventDefault();
-    
-    console.log('📝 ARK: Processing questionnaire submission...');
     
     try {
         const formData = new FormData(event.target);
@@ -2198,83 +1567,181 @@ async function handleQuestionnaireSubmit(event) {
             responses[key] = value;
         }
         
-        console.log('📝 ARK: Questionnaire responses:', responses);
-        
-        // Validate responses
-        const validation = profileManager.validateQuestionnaireResponses(responses);
-        if (!validation.isValid) {
-            showError(validation.errors.join('\n'));
-            return;
-        }
-        
-        // Show loading state
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Erstelle Profil...';
+        // Calculate personality category weights
+        const categoryWeights = calculatePersonalityWeights(responses);
         
         // Create user profile
-        const profile = await profileManager.createProfile(responses);
-        AppState.user = profile;
+        const profile = {
+            id: generateUserId(),
+            createdAt: new Date().toISOString(),
+            personalityCategories: categoryWeights,
+            preferences: {
+                notificationsEnabled: false,
+                notificationTime: '09:00',
+                theme: 'auto',
+                quoteLength: 'medium'
+            }
+        };
+        
+        // Save profile
+        await saveUserProfile(profile);
         
         // Show success message
-        showToast('Profil erfolgreich erstellt! Willkommen bei ARK! 🎉', 4000);
+        showToast('Profile created successfully! Welcome to ARK!', 4000);
         
-        // Navigate to daily quote after a short delay
+        // Navigate to daily quote
         setTimeout(() => {
             navigateToView('daily-quote');
-        }, 1500);
-        
-        console.log('✅ ARK: Profile created and user onboarded successfully');
+        }, 1000);
         
     } catch (error) {
-        console.error('❌ ARK: Error submitting questionnaire:', error);
-        showError('Fehler beim Erstellen des Profils. Bitte versuche es erneut.');
-        
-        // Reset button state
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Setup abschließen';
-        }
+        console.error('ARK: Error submitting questionnaire:', error);
+        showError('Failed to create profile. Please try again.');
     }
 }
 
 /**
  * Handle skip setup
  */
-async function handleSkipSetup() {
-    console.log('⏭️ ARK: User chose to skip profile setup');
+function handleSkipSetup() {
+    // Create a default profile
+    const defaultProfile = {
+        id: generateUserId(),
+        createdAt: new Date().toISOString(),
+        personalityCategories: [
+            { category: 'spirituality', weight: 0.17, confidence: 0.5 },
+            { category: 'sport', weight: 0.17, confidence: 0.5 },
+            { category: 'education', weight: 0.17, confidence: 0.5 },
+            { category: 'health', weight: 0.17, confidence: 0.5 },
+            { category: 'humor', weight: 0.16, confidence: 0.5 },
+            { category: 'philosophy', weight: 0.16, confidence: 0.5 }
+        ],
+        preferences: {
+            notificationsEnabled: false,
+            notificationTime: '09:00',
+            theme: 'auto',
+            quoteLength: 'medium'
+        }
+    };
     
+    saveUserProfile(defaultProfile);
+    showToast('Using default preferences. You can customize later in settings.', 4000);
+    
+    setTimeout(() => {
+        navigateToView('daily-quote');
+    }, 1000);
+}
+
+/**
+ * Calculate personality weights from questionnaire responses
+ */
+function calculatePersonalityWeights(responses) {
+    const categories = ['spirituality', 'sport', 'education', 'health', 'humor', 'philosophy'];
+    const counts = {};
+    
+    // Initialize counts
+    categories.forEach(cat => counts[cat] = 0);
+    
+    // Count responses for each category
+    Object.values(responses).forEach(value => {
+        if (counts.hasOwnProperty(value)) {
+            counts[value]++;
+        }
+    });
+    
+    // Calculate total responses
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    
+    // Calculate weights and confidence
+    return categories.map(category => ({
+        category,
+        weight: total > 0 ? counts[category] / total : 1 / categories.length,
+        confidence: total > 0 ? 0.8 : 0.5 // Higher confidence if user answered questions
+    }));
+}
+
+/**
+ * Generate a unique user ID
+ */
+function generateUserId() {
+    return 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * Save user profile
+ */
+async function saveUserProfile(profile) {
     try {
-        // Show loading state
-        const skipBtn = document.getElementById('skip-setup');
-        const originalText = skipBtn.textContent;
-        skipBtn.disabled = true;
-        skipBtn.textContent = 'Erstelle Standard-Profil...';
+        // Save to localStorage
+        localStorage.setItem('ark-user-id', profile.id);
+        localStorage.setItem('ark-user-profile', JSON.stringify(profile));
         
-        // Create default profile
-        const profile = await profileManager.createDefaultProfile();
+        // Update app state
         AppState.user = profile;
         
-        showToast('Standard-Einstellungen verwendet. Du kannst diese später in den Einstellungen anpassen.', 4000);
-        
-        setTimeout(() => {
-            navigateToView('daily-quote');
-        }, 1500);
-        
-        console.log('✅ ARK: Default profile created successfully');
-        
-    } catch (error) {
-        console.error('❌ ARK: Error creating default profile:', error);
-        showError('Fehler beim Erstellen des Standard-Profils. Bitte versuche es erneut.');
-        
-        // Reset button state
-        const skipBtn = document.getElementById('skip-setup');
-        if (skipBtn) {
-            skipBtn.disabled = false;
-            skipBtn.textContent = 'Vorerst überspringen';
+        // Try to sync with API if online
+        if (AppState.isOnline) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(profile)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.token) {
+                        localStorage.setItem('ark-auth-token', data.token);
+                    }
+                }
+            } catch (error) {
+                console.error('ARK: Error syncing profile with API:', error);
+                // Continue anyway - profile is saved locally
+            }
         }
+        
+        return profile;
+    } catch (error) {
+        console.error('ARK: Error saving user profile:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load user profile from API
+ */
+async function loadUserProfile(userId) {
+    try {
+        // First try to load from localStorage
+        const localProfile = localStorage.getItem('ark-user-profile');
+        if (localProfile) {
+            return JSON.parse(localProfile);
+        }
+        
+        // If online, try to fetch from API
+        if (AppState.isOnline) {
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('ark-auth-token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const profile = await response.json();
+                // Cache locally
+                localStorage.setItem('ark-user-profile', JSON.stringify(profile));
+                return profile;
+            }
+        }
+        
+        // Fallback to default profile
+        return null;
+    } catch (error) {
+        console.error('ARK: Error loading user profile:', error);
+        return null;
     }
 }
 
@@ -2282,22 +1749,15 @@ async function handleSkipSetup() {
  * Store feedback locally for offline sync
  */
 function storeFeedbackLocally(feedbackData) {
-    console.log('💾 ARK: Storing feedback locally:', feedbackData);
+    const pendingFeedback = JSON.parse(localStorage.getItem('ark-pending-feedback') || '[]');
     
-    try {
-        const pendingFeedback = JSON.parse(localStorage.getItem('ark-pending-feedback') || '[]');
-        
-        // Remove any existing feedback for this quote to avoid duplicates
-        const filteredFeedback = pendingFeedback.filter(f => f.quoteId !== feedbackData.quoteId);
-        
-        // Add the new feedback
-        filteredFeedback.push(feedbackData);
-        
-        localStorage.setItem('ark-pending-feedback', JSON.stringify(filteredFeedback));
-        console.log('✅ ARK: Feedback stored locally successfully');
-    } catch (error) {
-        console.error('❌ ARK: Error storing feedback locally:', error);
-    }
+    // Remove any existing feedback for this quote
+    const filteredFeedback = pendingFeedback.filter(f => f.quoteId !== feedbackData.quoteId);
+    
+    // Add the new feedback
+    filteredFeedback.push(feedbackData);
+    
+    localStorage.setItem('ark-pending-feedback', JSON.stringify(filteredFeedback));
 }
 
 /**
@@ -2307,35 +1767,15 @@ function storeFeedbackLocally(feedbackData) {
  * Handle online status change
  */
 function handleOnlineStatus() {
-    console.log('🌐 ARK: Connection restored - back online');
     AppState.isOnline = true;
-    
     if (elements.offlineBanner) {
         elements.offlineBanner.classList.add('hidden');
     }
-    
-    // Update UI for online mode
-    updateUIForOnlineMode();
-    
-    // Show connection restored message
-    showToast('Verbindung wiederhergestellt! Synchronisiere Daten...', 3000);
+    console.log('ARK: Back online');
     
     // Sync pending data when coming back online
-    setTimeout(async () => {
-        try {
-            await syncPendingData();
-            
-            // Also sync profile data
-            if (profileManager && profileManager.getCurrentProfile()) {
-                const syncSuccess = await profileManager.syncPendingData();
-                if (syncSuccess) {
-                    showToast('Profildaten erfolgreich synchronisiert! ✅', 2000);
-                }
-            }
-        } catch (error) {
-            console.error('❌ ARK: Sync failed:', error);
-            showToast('Synchronisation teilweise fehlgeschlagen', 3000);
-        }
+    setTimeout(() => {
+        syncPendingData();
     }, 1000); // Small delay to ensure connection is stable
 }
 
@@ -2343,80 +1783,11 @@ function handleOnlineStatus() {
  * Handle offline status change
  */
 function handleOfflineStatus() {
-    console.log('📴 ARK: Connection lost - gone offline');
     AppState.isOnline = false;
-    
     if (elements.offlineBanner) {
         elements.offlineBanner.classList.remove('hidden');
     }
-    
-    // Show offline message
-    showToast('You are now offline. Using cached content.', 4000);
-    
-    // Ensure we have offline content available
-    ensureOfflineContent();
-    
-    // Update UI to reflect offline state
-    updateUIForOfflineMode();
-}
-
-/**
- * Update UI for offline mode
- */
-function updateUIForOfflineMode() {
-    console.log('🎨 ARK: Updating UI for offline mode');
-    
-    // Disable features that require internet
-    const generateBtn = document.getElementById('generate-quote');
-    if (generateBtn) {
-        generateBtn.disabled = true;
-        generateBtn.title = 'Quote generation requires internet connection';
-    }
-    
-    // Update sync button
-    const syncBtn = document.getElementById('sync-data');
-    if (syncBtn) {
-        syncBtn.disabled = true;
-        syncBtn.textContent = 'Sync (Offline)';
-        syncBtn.title = 'Sync will resume when connection is restored';
-    }
-    
-    // Add offline indicator to quote if displayed
-    const quoteContainer = document.querySelector('.quote-container');
-    if (quoteContainer && !quoteContainer.querySelector('.offline-indicator')) {
-        const offlineIndicator = document.createElement('div');
-        offlineIndicator.className = 'offline-indicator';
-        offlineIndicator.innerHTML = '📴 Offline Mode';
-        quoteContainer.appendChild(offlineIndicator);
-    }
-}
-
-/**
- * Update UI for online mode
- */
-function updateUIForOnlineMode() {
-    console.log('🎨 ARK: Updating UI for online mode');
-    
-    // Re-enable features that require internet
-    const generateBtn = document.getElementById('generate-quote');
-    if (generateBtn) {
-        generateBtn.disabled = false;
-        generateBtn.title = 'Generate a new AI quote';
-    }
-    
-    // Update sync button
-    const syncBtn = document.getElementById('sync-data');
-    if (syncBtn) {
-        syncBtn.disabled = false;
-        syncBtn.textContent = 'Sync Data';
-        syncBtn.title = 'Synchronize offline data with server';
-    }
-    
-    // Remove offline indicator
-    const offlineIndicator = document.querySelector('.offline-indicator');
-    if (offlineIndicator) {
-        offlineIndicator.remove();
-    }
+    console.log('ARK: Gone offline');
 }
 
 /**
@@ -2752,84 +2123,16 @@ async function syncPendingData() {
  * Handle PWA install prompt
  */
 function handleInstallPrompt(event) {
-    console.log('📲 ARK: Install prompt event received');
     event.preventDefault();
     AppState.installPrompt = event;
     AppState.isInstallable = true;
     
-    // Check if user already dismissed the prompt in this session
-    if (sessionStorage.getItem('ark-install-dismissed') === 'true') {
-        console.log('📲 ARK: Install prompt was dismissed this session, not showing');
-        return;
-    }
-    
-    // Don't show install prompt immediately - wait for user to engage with the app
+    // Show install prompt after a delay
     setTimeout(() => {
-        if (AppState.isInstallable && elements.installPrompt) {
-            console.log('📲 ARK: Showing install prompt');
+        if (AppState.isInstallable) {
             elements.installPrompt.classList.remove('hidden');
         }
-    }, 10000); // Wait 10 seconds to let user explore the app first
-}
-
-/**
- * Handle app installation
- */
-async function handleInstallApp() {
-    console.log('📲 ARK: Install app button clicked');
-    
-    if (!AppState.installPrompt) {
-        console.warn('⚠️ ARK: No install prompt available');
-        showToast('Installation not available at this time', 3000);
-        return;
-    }
-    
-    try {
-        // Show the install prompt
-        AppState.installPrompt.prompt();
-        
-        // Wait for the user's choice
-        const result = await AppState.installPrompt.userChoice;
-        console.log('📲 ARK: Install prompt result:', result);
-        
-        if (result.outcome === 'accepted') {
-            console.log('✅ ARK: User accepted the install prompt');
-            showToast('App is being installed...', 3000);
-        } else {
-            console.log('❌ ARK: User dismissed the install prompt');
-        }
-        
-        // Hide the install prompt
-        if (elements.installPrompt) {
-            elements.installPrompt.classList.add('hidden');
-        }
-        
-        // Clean up
-        AppState.installPrompt = null;
-        AppState.isInstallable = false;
-        
-    } catch (error) {
-        console.error('❌ ARK: Error during app installation:', error);
-        showToast('Installation failed. Please try again.', 3000);
-    }
-}
-
-/**
- * Handle dismissing install prompt
- */
-function handleDismissInstallPrompt() {
-    console.log('📲 ARK: Dismiss install button clicked');
-    
-    if (elements.installPrompt) {
-        elements.installPrompt.classList.add('hidden');
-    }
-    
-    AppState.isInstallable = false;
-    
-    // Don't show again for this session
-    sessionStorage.setItem('ark-install-dismissed', 'true');
-    
-    console.log('📲 ARK: Install prompt dismissed for this session');
+    }, 5000);
 }
 
 /**
@@ -2837,9 +2140,6 @@ function handleDismissInstallPrompt() {
  */
 function setupPWAFeatures() {
     console.log('📲 ARK: Starting PWA features setup...');
-    
-    // Register service worker
-    registerServiceWorker();
     
     // Install button
     const installBtn = document.getElementById('install-app');
@@ -2849,11 +2149,30 @@ function setupPWAFeatures() {
     console.log('📲 ARK: Dismiss button:', dismissBtn ? 'Found' : 'Not found');
     
     if (installBtn) {
-        installBtn.addEventListener('click', handleInstallApp);
+        installBtn.addEventListener('click', async () => {
+            console.log('📲 ARK: Install button clicked');
+            if (AppState.installPrompt) {
+                AppState.installPrompt.prompt();
+                const result = await AppState.installPrompt.userChoice;
+                console.log('ARK: Install prompt result:', result);
+                
+                if (elements.installPrompt) {
+                    elements.installPrompt.classList.add('hidden');
+                }
+                AppState.installPrompt = null;
+                AppState.isInstallable = false;
+            }
+        });
     }
     
     if (dismissBtn) {
-        dismissBtn.addEventListener('click', handleDismissInstallPrompt);
+        dismissBtn.addEventListener('click', () => {
+            console.log('📲 ARK: Dismiss install button clicked');
+            if (elements.installPrompt) {
+                elements.installPrompt.classList.add('hidden');
+            }
+            AppState.isInstallable = false;
+        });
     }
     
     // Dismiss offline banner
@@ -2876,189 +2195,6 @@ function setupPWAFeatures() {
     });
     
     console.log('✅ ARK: PWA features setup completed');
-}
-
-/**
- * Register service worker for PWA functionality
- */
-async function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) {
-        console.warn('⚠️ ARK: Service Workers not supported in this browser');
-        return false;
-    }
-    
-    try {
-        console.log('📲 ARK: Registering service worker...');
-        
-        const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/'
-        });
-        
-        console.log('✅ ARK: Service Worker registered successfully:', registration.scope);
-        
-        // Handle service worker updates
-        registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            console.log('🔄 ARK: Service Worker update found');
-            
-            newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                        console.log('✨ ARK: New Service Worker available');
-                        showUpdateNotification();
-                    } else {
-                        console.log('✅ ARK: Service Worker installed for first time');
-                    }
-                }
-            });
-        });
-        
-        // Check for updates periodically
-        setInterval(() => {
-            registration.update();
-        }, 60000); // Check every minute
-        
-        // Listen for messages from service worker
-        navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-        
-        return registration;
-    } catch (error) {
-        console.error('❌ ARK: Service Worker registration failed:', error);
-        return false;
-    }
-}
-
-/**
- * Handle messages from service worker
- */
-function handleServiceWorkerMessage(event) {
-    console.log('📲 ARK: Message from Service Worker:', event.data);
-    
-    if (event.data && event.data.type) {
-        switch (event.data.type) {
-            case 'CACHE_UPDATED':
-                console.log('📦 ARK: Cache updated by Service Worker');
-                break;
-            case 'OFFLINE_FALLBACK':
-                console.log('📴 ARK: Using offline fallback');
-                showOfflineIndicator();
-                break;
-            case 'SYNC_COMPLETE':
-                console.log('🔄 ARK: Background sync completed');
-                showToast('Data synchronized successfully', 3000);
-                break;
-            case 'SYNC_FAILED':
-                console.log('❌ ARK: Background sync failed');
-                showToast('Failed to sync data', 3000);
-                break;
-        }
-    }
-}
-
-/**
- * Show update notification when new service worker is available
- */
-function showUpdateNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'update-notification';
-    notification.innerHTML = `
-        <div class="update-content">
-            <p>Eine neue Version der App ist verfügbar!</p>
-            <div class="update-actions">
-                <button id="update-now" class="btn btn-primary btn-sm">Jetzt aktualisieren</button>
-                <button id="update-later" class="btn btn-secondary btn-sm">Später</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Handle update actions
-    document.getElementById('update-now').addEventListener('click', () => {
-        window.location.reload();
-    });
-    
-    document.getElementById('update-later').addEventListener('click', () => {
-        document.body.removeChild(notification);
-    });
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (document.body.contains(notification)) {
-            document.body.removeChild(notification);
-        }
-    }, 10000);
-}
-
-/**
- * Check if app is running in standalone mode (installed as PWA)
- */
-function isStandalone() {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone ||
-           document.referrer.includes('android-app://');
-}
-
-/**
- * Get cache status and size
- */
-async function getCacheStatus() {
-    if (!('caches' in window)) {
-        return { supported: false };
-    }
-    
-    try {
-        const cacheNames = await caches.keys();
-        let totalSize = 0;
-        
-        for (const cacheName of cacheNames) {
-            const cache = await caches.open(cacheName);
-            const keys = await cache.keys();
-            
-            for (const request of keys) {
-                const response = await cache.match(request);
-                if (response) {
-                    const blob = await response.blob();
-                    totalSize += blob.size;
-                }
-            }
-        }
-        
-        return {
-            supported: true,
-            cacheNames,
-            totalSize,
-            totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2)
-        };
-    } catch (error) {
-        console.error('❌ ARK: Error getting cache status:', error);
-        return { supported: true, error: error.message };
-    }
-}
-
-/**
- * Clear all caches (for debugging or reset)
- */
-async function clearAllCaches() {
-    if (!('caches' in window)) {
-        console.warn('⚠️ ARK: Cache API not supported');
-        return false;
-    }
-    
-    try {
-        const cacheNames = await caches.keys();
-        console.log('🗑️ ARK: Clearing caches:', cacheNames);
-        
-        await Promise.all(
-            cacheNames.map(cacheName => caches.delete(cacheName))
-        );
-        
-        console.log('✅ ARK: All caches cleared');
-        return true;
-    } catch (error) {
-        console.error('❌ ARK: Error clearing caches:', error);
-        return false;
-    }
 }
 
 /**
@@ -3125,11 +2261,7 @@ async function generateNewQuote() {
         // Check AI status first
         const aiStatus = await checkAIStatus();
         if (!aiStatus.ai_enabled) {
-            if (!aiStatus.openai_configured) {
-                showToast('KI-Features sind nicht konfiguriert. Kontaktiere den Administrator.', 5000);
-            } else {
-                showToast('KI-Generierung ist derzeit nicht verfügbar. Versuche es später erneut.', 4000);
-            }
+            showToast('KI-Generierung ist nicht verfügbar', 4000);
             return;
         }
         
@@ -3138,15 +2270,12 @@ async function generateNewQuote() {
         generateBtn.textContent = '🤖 Generiere...';
         
         // Get user preferences for generation
-        const userPrefs = AppState.user?.preferences || {};
-        const theme = userPrefs.favoriteTheme || userPrefs.themes?.[0] || 'Motivation';
+        const theme = AppState.user?.preferences?.favoriteTheme || 'Motivation';
         const mood = 'positiv';
-        const length = userPrefs.quoteLength || 'medium';
-        
-        console.log('🤖 ARK: Generating quote with preferences:', { theme, mood, length });
+        const length = AppState.user?.preferences?.quoteLength || 'medium';
         
         // Call AI generation endpoint
-        const response = await fetch(`${API_BASE_URL}/api/quotes/generate`, {
+        const response = await fetch(`${API_BASE_URL}/quotes/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -3161,40 +2290,24 @@ async function generateNewQuote() {
         
         if (response.ok) {
             const result = await response.json();
+            const newQuote = result.quote;
             
-            if (result.success && result.quote) {
-                const newQuote = result.quote;
-                
-                // Display the new quote
-                displayQuote({
-                    id: newQuote.id,
-                    content: newQuote.text,
-                    author: newQuote.author,
-                    date: formatDate(new Date()),
-                    theme: newQuote.theme,
-                    generated: true
-                });
-                
-                AppState.currentQuote = newQuote;
-                showToast('Neuer Spruch generiert! 🎉', 3000);
-            } else {
-                throw new Error(result.error || 'Unerwartete Antwort vom Server');
-            }
+            // Display the new quote
+            displayQuote({
+                id: newQuote.id,
+                content: newQuote.text,
+                author: newQuote.author,
+                date: formatDate(new Date()),
+                theme: newQuote.theme,
+                generated: true
+            });
+            
+            AppState.currentQuote = newQuote;
+            showToast('Neuer Spruch generiert! 🎉', 3000);
+            
         } else {
-            const errorData = await response.json().catch(() => ({}));
-            
-            if (response.status === 503) {
-                // AI service not available
-                showToast('KI-Generierung ist derzeit nicht verfügbar. Versuche es später erneut.', 5000);
-            } else if (response.status === 429) {
-                // Rate limit or quota exceeded
-                showToast('Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.', 5000);
-            } else if (response.status === 401) {
-                // Invalid API key
-                showToast('Authentifizierungsfehler. Bitte lade die Seite neu.', 5000);
-            } else {
-                throw new Error(errorData.error || `Server-Fehler: ${response.status}`);
-            }
+            const error = await response.json();
+            throw new Error(error.message || 'Fehler bei der Generierung');
         }
         
     } catch (error) {
@@ -3212,119 +2325,14 @@ async function generateNewQuote() {
  */
 async function checkAIStatus() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/ai-status`);
+        const response = await fetch(`${API_BASE_URL}/ai-status`);
         if (response.ok) {
-            const status = await response.json();
-            updateAIStatusDisplay(status);
-            return status;
+            return await response.json();
         }
-        const fallbackStatus = { ai_enabled: false };
-        updateAIStatusDisplay(fallbackStatus);
-        return fallbackStatus;
+        return { ai_enabled: false };
     } catch (error) {
         console.error('ARK: Error checking AI status:', error);
-        const fallbackStatus = { ai_enabled: false };
-        updateAIStatusDisplay(fallbackStatus);
-        return fallbackStatus;
-    }
-}
-
-/**
- * Update AI status display in the UI
- */
-function updateAIStatusDisplay(status) {
-    const statusIndicator = document.getElementById('ai-status-indicator');
-    const statusText = document.getElementById('ai-status-text');
-    const generateBtn = document.getElementById('generate-quote');
-    
-    if (!statusIndicator || !statusText) return;
-    
-    if (status.ai_enabled) {
-        statusText.textContent = '🤖 KI verfügbar';
-        statusIndicator.className = 'ai-status-indicator ai-enabled';
-        if (generateBtn) {
-            generateBtn.disabled = false;
-            generateBtn.title = 'Neuen KI-Spruch generieren';
-        }
-    } else {
-        statusText.textContent = '❌ KI nicht verfügbar';
-        statusIndicator.className = 'ai-status-indicator ai-disabled';
-        if (generateBtn) {
-            generateBtn.disabled = true;
-            generateBtn.title = 'KI-Generierung ist derzeit nicht verfügbar';
-        }
-    }
-    
-    // Show the status indicator
-    statusIndicator.classList.remove('hidden');
-    
-    // Hide after 5 seconds if AI is enabled
-    if (status.ai_enabled) {
-        setTimeout(() => {
-            statusIndicator.classList.add('hidden');
-        }, 5000);
-    }
-    
-    // Also update settings display if on settings page
-    updateSettingsAIStatus(status);
-}
-
-/**
- * Update AI status display in settings
- */
-function updateSettingsAIStatus(status) {
-    const statusLabel = document.getElementById('ai-status-label');
-    const statusDisplay = document.getElementById('ai-status-display');
-    
-    if (!statusLabel || !statusDisplay) return;
-    
-    if (status.ai_enabled) {
-        statusLabel.textContent = `🤖 KI verfügbar (${status.model})`;
-        statusDisplay.className = 'ai-status-display ai-enabled';
-        
-        if (status.connectivity === 'connected') {
-            statusLabel.textContent += ' - Verbunden';
-        } else if (status.connectivity === 'error') {
-            statusLabel.textContent += ' - Verbindungsfehler';
-            statusDisplay.className = 'ai-status-display ai-warning';
-        }
-    } else {
-        statusLabel.textContent = '❌ KI nicht verfügbar';
-        statusDisplay.className = 'ai-status-display ai-disabled';
-        
-        if (!status.openai_configured) {
-            statusLabel.textContent += ' (API-Schlüssel fehlt)';
-        }
-    }
-}
-
-/**
- * Handle refresh AI status button click
- */
-async function handleRefreshAIStatus() {
-    const refreshBtn = document.getElementById('refresh-ai-status');
-    const statusLabel = document.getElementById('ai-status-label');
-    
-    if (refreshBtn) {
-        refreshBtn.disabled = true;
-        refreshBtn.textContent = 'Prüfe...';
-    }
-    
-    if (statusLabel) {
-        statusLabel.textContent = 'KI-Status wird geprüft...';
-    }
-    
-    try {
-        const status = await checkAIStatus();
-        showToast('KI-Status aktualisiert', 2000);
-    } catch (error) {
-        console.error('ARK: Error refreshing AI status:', error);
-        showToast('Fehler beim Aktualisieren des KI-Status', 3000);
-    } finally {
-        if (refreshBtn) {
-            refreshBtn.disabled = false;
-            refreshBtn.textContent = 'Aktualisieren';
-        }
+        return { ai_enabled: false };
     }
 }
 function shareQuote() {
@@ -3399,91 +2407,19 @@ function hideLoadingScreen() {
 }
 
 /**
- * Show error message with recovery options
+ * Show error message
  */
-function showError(message, errorType = 'ui', originalError = null, context = {}) {
+function showError(message) {
     console.error('ARK Error:', message);
+    // This will be enhanced with proper error UI in later tasks
     
-    // Use error handler if available
-    if (errorHandler) {
-        const errorId = errorHandler.logError('high', errorType, message, originalError, {
-            source: 'showError',
-            userFacing: true,
-            ...context
-        });
-        context.errorId = errorId;
-    }
-    
-    // Use error recovery system if available for better UX
-    if (errorRecovery && errorType !== 'simple') {
-        return errorRecovery.showErrorWithRecovery(errorType, originalError, {
-            ...context,
-            currentView: AppState.currentView
-        });
-    }
-    
-    // Fallback to enhanced error toast
-    const errorToast = document.createElement('div');
-    errorToast.className = 'toast error-toast';
-    errorToast.innerHTML = `
-        <div class="error-icon">❌</div>
-        <div class="error-content">
-            <div class="error-message">${message}</div>
-            <div class="error-actions">
-                <button class="error-dismiss" onclick="this.parentElement.parentElement.parentElement.remove()">Dismiss</button>
-                ${context.showRetry ? '<button class="error-retry" onclick="window.location.reload()">Retry</button>' : ''}
-            </div>
-        </div>
-    `;
-    
-    errorToast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: var(--error-bg, #fee);
-        color: var(--error-text, #c53030);
-        border: 1px solid var(--error-border, #feb2b2);
-        padding: var(--spacing-md);
-        border-radius: var(--border-radius-md);
-        z-index: var(--z-tooltip);
-        max-width: 400px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-sm);
-        opacity: 0;
-        transform: translateX(100%);
-        transition: all var(--transition-normal);
-    `;
-    
-    // Add offline indicator if applicable
+    // For now, show a simple alert
     if (!AppState.isOnline) {
-        const offlineMessage = message + ' (You are currently offline)';
-        errorToast.querySelector('.error-message').textContent = offlineMessage;
+        message += ' (You are currently offline)';
     }
     
-    document.body.appendChild(errorToast);
-    
-    // Animate in
-    requestAnimationFrame(() => {
-        errorToast.style.opacity = '1';
-        errorToast.style.transform = 'translateX(0)';
-    });
-    
-    // Auto-remove after 8 seconds for errors
-    setTimeout(() => {
-        if (errorToast.parentNode) {
-            errorToast.style.opacity = '0';
-            errorToast.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (errorToast.parentNode) {
-                    document.body.removeChild(errorToast);
-                }
-            }, 300);
-        }
-    }, 8000);
-    
-    return errorToast;
+    // Could implement a toast notification system here
+    alert(message);
 }
 
 /**
@@ -3781,40 +2717,49 @@ const NotificationManager = {
  * Handle notification settings changes
  */
 async function handleNotificationToggle(event) {
-    console.log('🔔 ARK: Notification toggle changed:', event.target.checked);
-    
     const enabled = event.target.checked;
     
-    try {
-        if (enabled) {
-            // Request notification permission first
-            if (Notification.permission === 'default') {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    event.target.checked = false;
-                    showToast('Benachrichtigungsberechtigung verweigert', 3000);
-                    return;
-                }
-            } else if (Notification.permission === 'denied') {
+    if (enabled) {
+        // Request notification permission first
+        if (Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
                 event.target.checked = false;
-                showToast('Benachrichtigungen sind blockiert. Bitte aktiviere sie in den Browser-Einstellungen.', 5000);
+                showToast('Notification permission denied');
                 return;
             }
+        } else if (Notification.permission === 'denied') {
+            event.target.checked = false;
+            showToast('Notifications are blocked. Please enable them in your browser settings.');
+            return;
         }
         
-        // Update preference
-        if (preferencesManager) {
-            await preferencesManager.updatePreference('notificationsEnabled', enabled);
-            showToast(enabled ? 'Benachrichtigungen aktiviert! 🔔' : 'Benachrichtigungen deaktiviert', 2000);
-        } else {
-            // Fallback to localStorage
-            localStorage.setItem('ark-notifications-enabled', enabled.toString());
-            showToast(enabled ? 'Benachrichtigungen aktiviert' : 'Benachrichtigungen deaktiviert', 2000);
+        // Subscribe to notifications
+        const success = await NotificationManager.subscribe();
+        if (!success) {
+            event.target.checked = false;
+            return;
         }
-    } catch (error) {
-        console.error('❌ ARK: Error toggling notifications:', error);
-        showToast('Fehler beim Ändern der Benachrichtigungseinstellungen', 3000);
-        event.target.checked = !enabled; // Revert
+        
+        // Update preferences with current time setting
+        const timeInput = document.getElementById('notification-time');
+        const time = timeInput ? timeInput.value : '09:00';
+        
+        await NotificationManager.updatePreferences({
+            enabled: true,
+            time: time,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+        
+    } else {
+        // Unsubscribe from notifications
+        await NotificationManager.unsubscribe();
+        
+        await NotificationManager.updatePreferences({
+            enabled: false,
+            time: document.getElementById('notification-time')?.value || '09:00',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
     }
 }
 
@@ -3822,24 +2767,12 @@ async function handleNotificationToggle(event) {
  * Handle notification time changes
  */
 async function handleNotificationTimeChange(event) {
-    console.log('⏰ ARK: Notification time changed:', event.target.value);
-    
     const time = event.target.value;
+    const enabled = document.getElementById('notifications-enabled')?.checked || false;
     
-    try {
-        if (preferencesManager) {
-            await preferencesManager.updatePreference('notificationTime', time);
-            showToast('Benachrichtigungszeit gespeichert! ⏰', 2000);
-        } else {
-            // Fallback to localStorage
-            localStorage.setItem('ark-notification-time', time);
-            showToast('Benachrichtigungszeit geändert', 2000);
-        }
-    } catch (error) {
-        console.error('❌ ARK: Error changing notification time:', error);
-        showToast('Fehler beim Ändern der Benachrichtigungszeit', 3000);
-    }
-}
+    if (enabled) {
+        await NotificationManager.updatePreferences({
+            enabled: true,
             time: time,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         });
@@ -3929,6 +2862,46 @@ function handleDismissOffline() {
     const offlineBanner = document.getElementById('offline-banner');
     if (offlineBanner) {
         offlineBanner.classList.add('hidden');
+    }
+}
+
+/**
+ * Handle dismiss install prompt
+ */
+function handleDismissInstall() {
+    console.log('ARK: Dismissing install prompt');
+    const installPrompt = document.getElementById('install-prompt');
+    if (installPrompt) {
+        installPrompt.classList.add('hidden');
+    }
+    AppState.isInstallable = false;
+}
+
+/**
+ * Handle install app button
+ */
+async function handleInstallApp() {
+    console.log('ARK: Install app button clicked');
+    
+    if (AppState.installPrompt) {
+        try {
+            AppState.installPrompt.prompt();
+            const result = await AppState.installPrompt.userChoice;
+            console.log('ARK: Install prompt result:', result);
+            
+            if (result.outcome === 'accepted') {
+                showToast('App installation started!', 3000);
+            } else {
+                showToast('App installation cancelled', 2000);
+            }
+            
+            handleDismissInstall();
+        } catch (error) {
+            console.error('ARK: Error during app installation:', error);
+            showToast('Installation failed. Please try again.', 3000);
+        }
+    } else {
+        showToast('Installation not available', 2000);
     }
 }
 
@@ -4032,33 +3005,6 @@ function debounce(func, wait) {
 // Initialize the application when DOM is loaded
 console.log('🚀 ARK: Script loaded, checking DOM ready state...');
 console.log('🚀 ARK: Document ready state:', document.readyState);
-
-// Add cleanup when page is unloaded
-window.addEventListener('beforeunload', () => {
-    console.log('🧹 ARK: Cleaning up before page unload');
-    if (profileManager) {
-        profileManager.stopPeriodicSync();
-    }
-});
-
-// Add visibility change handler for better sync management
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        console.log('👁️ ARK: Page hidden, pausing sync');
-        if (profileManager) {
-            profileManager.stopPeriodicSync();
-        }
-    } else {
-        console.log('👁️ ARK: Page visible, resuming sync');
-        if (profileManager && profileManager.getCurrentProfile()) {
-            profileManager.startPeriodicSync();
-            // Trigger immediate sync when page becomes visible
-            profileManager.syncPendingData().catch(error => {
-                console.error('❌ ARK: Sync on visibility change failed:', error);
-            });
-        }
-    }
-});
 
 if (document.readyState === 'loading') {
     console.log('🚀 ARK: DOM still loading, waiting for DOMContentLoaded...');

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ARK Digital Calendar - Personalized daily quotes and inspiration">
+    <meta name="description" content="ARK Digitaler Kalender - Personalisierte tägliche Sprüche und Inspiration">
     <meta name="theme-color" content="#007bff">
     
     <!-- PWA Meta Tags -->
@@ -58,11 +58,11 @@
         .hidden { display: none !important; }
     </style>
     
-    <title>ARK Digital Calendar</title>
+    <title>ARK Digitaler Kalender</title>
 </head>
 <body>
     <!-- Skip link for accessibility -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
     
     <!-- App Shell -->
     <div id="app">
@@ -73,7 +73,7 @@
                     <h1>ARK</h1>
                 </div>
                 <div class="nav-menu">
-                    <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">
+                    <button id="menu-toggle" class="menu-toggle" aria-label="Menü öffnen">
                         <span></span>
                         <span></span>
                         <span></span>
@@ -87,7 +87,7 @@
             <!-- Loading Screen -->
             <div id="loading-screen" class="loading-screen">
                 <div class="loading-spinner"></div>
-                <p>Loading your daily inspiration...</p>
+                <p>Lade deine tägliche Inspiration...</p>
             </div>
 
             <!-- Daily Quote View -->
@@ -113,22 +113,28 @@
 
                     <!-- Feedback Buttons -->
                     <div class="feedback-container">
-                        <button id="feedback-dislike" class="feedback-btn feedback-dislike" aria-label="Dislike this quote">
+                        <button id="feedback-dislike" class="feedback-btn feedback-dislike" aria-label="Spruch gefällt mir nicht">
                             👎
                         </button>
-                        <button id="feedback-neutral" class="feedback-btn feedback-neutral" aria-label="Neutral about this quote">
+                        <button id="feedback-neutral" class="feedback-btn feedback-neutral" aria-label="Neutral zu diesem Spruch">
                             😐
                         </button>
-                        <button id="feedback-like" class="feedback-btn feedback-like" aria-label="Like this quote">
+                        <button id="feedback-like" class="feedback-btn feedback-like" aria-label="Spruch gefällt mir">
                             👍
                         </button>
                     </div>
                     
                     <!-- Quote Actions -->
                     <div class="quote-actions">
-                        <button id="share-quote" class="action-btn" aria-label="Share this quote">
-                            📤 Share
+                        <button id="share-quote" class="action-btn" aria-label="Spruch teilen">
+                            📤 Teilen
                         </button>
+                        <button id="generate-quote" class="action-btn" aria-label="Neuen Spruch generieren">
+                            🤖 Neuer Spruch
+                        </button>
+                        <div id="ai-status-indicator" class="ai-status-indicator hidden">
+                            <span id="ai-status-text">KI-Status wird geprüft...</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -137,23 +143,23 @@
             <section id="archive" class="view archive-view hidden">
                 <div class="archive-container">
                     <div class="archive-header">
-                        <h2>Quote Archive</h2>
+                        <h2>Sprüche-Archiv</h2>
                         <div class="search-container">
-                            <input type="search" id="archive-search" placeholder="Search quotes..." class="search-input">
-                            <button id="search-btn" class="search-btn" aria-label="Search">🔍</button>
+                            <input type="search" id="archive-search" placeholder="Sprüche suchen..." class="search-input">
+                            <button id="search-btn" class="search-btn" aria-label="Suchen">🔍</button>
                         </div>
                     </div>
                     
                     <div class="archive-filters">
                         <select id="theme-filter" class="filter-select">
-                            <option value="">All Themes</option>
+                            <option value="">Alle Themen</option>
                             <!-- Theme options will be populated dynamically -->
                         </select>
                         <select id="date-filter" class="filter-select">
-                            <option value="">All Dates</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                            <option value="year">This Year</option>
+                            <option value="">Alle Daten</option>
+                            <option value="week">Diese Woche</option>
+                            <option value="month">Dieser Monat</option>
+                            <option value="year">Dieses Jahr</option>
                         </select>
                     </div>
 
@@ -167,8 +173,8 @@
             <section id="profile-setup" class="view profile-setup-view hidden">
                 <div class="profile-container">
                     <div class="profile-header">
-                        <h2>Welcome to ARK</h2>
-                        <p>Let's personalize your daily inspiration</p>
+                        <h2>Willkommen bei ARK</h2>
+                        <p>Lass uns deine tägliche Inspiration personalisieren</p>
                     </div>
 
                     <form id="questionnaire-form" class="questionnaire-form">
@@ -180,57 +186,73 @@
             <!-- Settings View -->
             <section id="settings" class="view settings-view hidden">
                 <div class="settings-container">
-                    <h2>Settings</h2>
+                    <h2>Einstellungen</h2>
                     
                     <div class="settings-section">
-                        <h3>Notifications</h3>
+                        <h3>Benachrichtigungen</h3>
                         <div class="setting-item">
                             <label class="setting-label">
                                 <input type="checkbox" id="notifications-enabled" class="setting-checkbox">
-                                Enable daily notifications
+                                Tägliche Benachrichtigungen aktivieren
                             </label>
                         </div>
                         <div class="setting-item">
                             <label class="setting-label">
-                                Notification time:
+                                Benachrichtigungszeit:
                                 <input type="time" id="notification-time" class="setting-input" value="09:00">
                             </label>
                         </div>
                         <div class="setting-item">
                             <button id="test-notification" class="btn btn-secondary" disabled>
-                                Send Test Notification
+                                Test-Benachrichtigung senden
                             </button>
                         </div>
                     </div>
 
                     <div class="settings-section">
-                        <h3>Preferences</h3>
+                        <h3>Einstellungen</h3>
                         <div class="setting-item">
                             <label class="setting-label">
-                                Theme:
+                                Design:
                                 <select id="app-theme" class="setting-select">
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                    <option value="auto">Auto</option>
+                                    <option value="light">Hell</option>
+                                    <option value="dark">Dunkel</option>
+                                    <option value="auto">Automatisch</option>
                                 </select>
                             </label>
                         </div>
                         <div class="setting-item">
                             <label class="setting-label">
-                                Quote length preference:
+                                Spruch-Länge:
                                 <select id="quote-length" class="setting-select">
-                                    <option value="short">Short</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="long">Long</option>
+                                    <option value="short">Kurz</option>
+                                    <option value="medium">Mittel</option>
+                                    <option value="long">Lang</option>
                                 </select>
                             </label>
                         </div>
                     </div>
 
                     <div class="settings-section">
-                        <h3>Data</h3>
-                        <button id="export-data" class="setting-button">Export My Data</button>
-                        <button id="sync-data" class="setting-button">Sync Data</button>
+                        <h3>KI-Features</h3>
+                        <div class="setting-item">
+                            <div id="ai-status-display" class="ai-status-display">
+                                <span id="ai-status-label">KI-Status wird geprüft...</span>
+                                <button id="refresh-ai-status" class="btn btn-secondary btn-sm">Aktualisieren</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <p class="setting-description">
+                                KI-Features ermöglichen die Generierung personalisierter Sprüche basierend auf deinen Vorlieben.
+                                Wenn KI nicht verfügbar ist, werden kuratierte Sprüche verwendet.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Daten</h3>
+                        <button id="export-data" class="setting-button">Meine Daten exportieren</button>
+                        <button id="sync-data" class="setting-button">Daten synchronisieren</button>
                         <div id="sync-status" class="sync-status"></div>
                     </div>
                 </div>
@@ -239,54 +261,84 @@
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <button id="nav-today" class="nav-item active" aria-label="Today's Quote">
+            <button id="nav-today" class="nav-item active" aria-label="Heutiger Spruch">
                 <span class="nav-icon">📅</span>
-                <span class="nav-label">Today</span>
+                <span class="nav-label">Heute</span>
             </button>
-            <button id="nav-archive" class="nav-item" aria-label="Quote Archive">
+            <button id="nav-archive" class="nav-item" aria-label="Sprüche-Archiv">
                 <span class="nav-icon">📚</span>
-                <span class="nav-label">Archive</span>
+                <span class="nav-label">Archiv</span>
             </button>
-            <button id="nav-settings" class="nav-item" aria-label="Settings">
+            <button id="nav-settings" class="nav-item" aria-label="Einstellungen">
                 <span class="nav-icon">⚙️</span>
-                <span class="nav-label">Settings</span>
+                <span class="nav-label">Einstellungen</span>
             </button>
         </nav>
     </div>
 
     <!-- Offline Banner -->
     <div id="offline-banner" class="offline-banner hidden">
-        <p>You're offline. Some features may be limited.</p>
+        <p>Du bist offline. Einige Funktionen sind möglicherweise eingeschränkt.</p>
         <button id="dismiss-offline" class="dismiss-btn">×</button>
     </div>
 
     <!-- Install Prompt -->
     <div id="install-prompt" class="install-prompt hidden">
         <div class="install-content">
-            <h3>Install ARK</h3>
-            <p>Add ARK to your home screen for the best experience</p>
+            <h3>ARK installieren</h3>
+            <p>Füge ARK zu deinem Startbildschirm hinzu für die beste Erfahrung</p>
             <div class="install-actions">
-                <button id="install-app" class="install-btn primary">Install</button>
-                <button id="dismiss-install" class="install-btn secondary">Not now</button>
+                <button id="install-app" class="install-btn primary">Installieren</button>
+                <button id="dismiss-install" class="install-btn secondary">Nicht jetzt</button>
             </div>
         </div>
     </div>
 
+    <!-- DOM Diagnostic Script (temporary) -->
+    <script src="/js/dom-diagnostic.js"></script>
+    
+    <!-- API Client Module -->
+    <script src="/src/js/modules/api-client.js"></script>
+    
     <!-- Scripts - Use ES modules for better performance -->
     <script type="module" src="/js/app.js"></script>
     
     <!-- Service Worker Registration -->
     <script>
+        // Register service worker for PWA functionality
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
-                        console.log('SW registered: ', registration);
+                        console.log('✅ Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates periodically
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // Check every minute
+                        
+                        // Listen for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            console.log('🔄 Service Worker update found');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('✨ New Service Worker available, will activate on next page load');
+                                    // Optionally show update notification to user
+                                    if (window.showUpdateNotification) {
+                                        window.showUpdateNotification();
+                                    }
+                                }
+                            });
+                        });
                     })
-                    .catch(registrationError => {
-                        console.log('SW registration failed: ', registrationError);
+                    .catch(error => {
+                        console.error('❌ Service Worker registration failed:', error);
                     });
             });
+        } else {
+            console.warn('⚠️ Service Workers are not supported in this browser');
         }
     </script>
 </body>

@@ -31,10 +31,13 @@
   "author": "ARK Development Team",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "autoprefixer": "^10.4.16",
+    "babel-jest": "^30.2.0",
     "eslint": "^8.55.0",
     "fast-check": "^3.15.0",
     "http-server": "^14.1.1",
@@ -55,14 +58,40 @@
   ],
   "jest": {
     "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": ["<rootDir>/src/js/test-setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/js/test-setup.js"
+    ],
     "collectCoverageFrom": [
       "src/js/**/*.js",
       "!src/js/test-setup.js",
       "!src/js/**/*.test.js"
     ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"]
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "transform": {
+      "^.+\\.js$": [
+        "babel-jest",
+        {
+          "presets": [
+            [
+              "@babel/preset-env",
+              {
+                "targets": {
+                  "node": "current"
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(fast-check)/)"
+    ]
   },
   "eslintConfig": {
     "env": {
