@@ -1,0 +1,45 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 200;
+    /* Higher than leaf */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+
+.card {
+    background-color: hsl(var(--card-bg));
+    border: 1px solid hsl(var(--card-border));
+    padding: 1.5rem;
+    border-radius: 1rem;
+    max-width: 300px;
+    width: 90%;
+    box-shadow: var(--shadow-xl);
+    text-align: center;
+    color: white;
+}
+
+.word {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: hsl(var(--primary));
+}
+
+.definition {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.closeHint {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
