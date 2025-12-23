@@ -25,8 +25,8 @@ export default function Home() {
     // Timeline aggressively tightened for continuous flow
     timers.push(setTimeout(() => setAnimStage(1), 1200)); // Start expanding (duration ~1s -> finishes at 2200)
     timers.push(setTimeout(() => setAnimStage(2), 2200)); // Move to top immediately (duration 1.2s -> finishes at 3400)
-    timers.push(setTimeout(() => setAnimStage(3), 3400)); // Show Text immediately (duration ~1s -> finishes at 4400)
-    timers.push(setTimeout(() => setAnimStage(4), 4400)); // Show Input immediately
+    timers.push(setTimeout(() => setAnimStage(3), 3800)); // Show Text delayed (let YinYang settle)
+    timers.push(setTimeout(() => setAnimStage(4), 5800)); // Show Input delayed
     // Stage 5 is skipped/merged into 4 for simplicity in this new flow
 
     return () => timers.forEach(clearTimeout);
@@ -36,7 +36,7 @@ export default function Home() {
   const subheaderText = "digitaler Abreißkalender";
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500/30 overflow-hidden relative flex flex-col items-center justify-center p-6">
+    <main className="h-[100dvh] bg-[#050505] text-white font-sans selection:bg-amber-500/30 overflow-hidden relative flex flex-col items-center justify-start md:justify-center pt-[20vh] md:pt-0 md:pb-[15vh] p-6">
 
       {/* Intro Overlay: White Background to Black Dot */}
       <AnimatePresence mode="wait">
@@ -89,17 +89,15 @@ export default function Home() {
       <motion.div
         animate={animStage === 6 ? { opacity: 0, y: -20 } : { opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="relative z-10 text-center max-w-4xl w-full flex flex-col items-center"
+        className="relative z-10 text-center max-w-4xl w-full flex flex-col items-center gap-8"
       >
-        {/* Placeholder for Logo Area */}
-        <div className="h-28 mb-4 border-none flex flex-col items-center justify-end">
-
-          {/* STAGE 2: Small Header YinYang */}
+        {/* Placeholder for Logo Area / YinYang Stage 2 */}
+        <div className="h-12 border-none flex flex-col items-center justify-end shrink-0">
           {animStage >= 2 && (
-            <div className="group cursor-pointer">
+            <div className="group cursor-pointer relative z-[100]">
               <motion.div
                 layoutId="yinyang-shared"
-                className="w-10 h-10 flex items-center justify-center rounded-full shadow-[0_0_15px_rgba(255,255,255,0.2)] bg-black/10 backdrop-blur-sm"
+                className="w-10 h-10 flex items-center justify-center rounded-full shadow-[0_0_15px_rgba(255,255,255,0.2)] bg-black/10 backdrop-blur-sm relative z-[100]"
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
               >
                 <motion.div
@@ -115,33 +113,30 @@ export default function Home() {
           )}
         </div>
 
-        {/* Branding Section */}
-        <div className="inline-flex flex-col items-stretch mb-0 w-max max-w-full">
+        {/* Branding Section Group */}
+        <div className="flex flex-col items-center w-full gap-2">
+
           {/* Title */}
-          <div className="group h-[8.5rem] md:h-[14rem] flex items-center justify-center relative z-20">
+          <div className="group h-auto flex items-center justify-center relative z-20 w-full">
             <motion.h1
-              className="text-9xl md:text-[14rem] font-serif font-medium tracking-[-0.04em] leading-none drop-shadow-[0_0_40px_rgba(255,255,255,0.1)] relative transform-gpu pb-4"
+              className="text-[20vw] md:text-[14rem] font-serif font-medium tracking-[-0.04em] leading-none drop-shadow-[0_0_40px_rgba(255,255,255,0.1)] relative py-2 px-4 md:px-8"
               style={{
                 WebkitTextFillColor: "transparent",
                 WebkitBackgroundClip: "text",
-                backgroundImage:
-                  animStage >= 3
-                    ? "linear-gradient(to top, #fbbf24 0%, #ffffff 60%)"
-                    : "linear-gradient(to top, #ffffff 100%, #ffffff 100%)",
+                backgroundImage: "linear-gradient(to top, #fbbf24 0%, #ffffff 60%)",
               }}
             >
               {lettersLabel.map((letter, i) => (
                 <motion.span
                   key={i}
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={animStage >= 3 ? { opacity: 1, y: 0 } : {}}
+                  initial={{ opacity: 0 }}
+                  animate={animStage >= 3 ? { opacity: 1 } : {}}
                   transition={{
-                    duration: 1,
-                    delay: i * 0.15,
-                    ease: [0.22, 1, 0.36, 1],
+                    duration: 1.5,
+                    delay: i * 0.1,
+                    ease: "easeOut",
                   }}
-                  className="inline-block transform-gpu"
-                  style={{ backfaceVisibility: "hidden" }}
+                  className="inline-block"
                 >
                   {letter}
                 </motion.span>
@@ -150,14 +145,14 @@ export default function Home() {
           </div>
 
           {/* Subheader */}
-          <div className="flex flex-col items-center gap-4 h-20">
-            <div className="w-full flex justify-between overflow-hidden px-1">
+          <div className="flex flex-col items-center justify-center h-auto">
+            <div className="w-full flex justify-center gap-[1px] md:gap-[3px] overflow-hidden px-1">
               {subheaderText.split("").map((char, i) => (
                 <motion.span
                   key={i}
                   initial={{ opacity: 0, filter: "blur(10px)" }}
                   animate={animStage >= 3 ? { opacity: 1, filter: "blur(0px)" } : {}}
-                  transition={{ duration: 0.5, delay: i * 0.03 }}
+                  transition={{ duration: 0.8, delay: 1.5 + i * 0.03 }}
                   className={`text-sm md:text-lg font-extralight tracking-tight ${[0, 10, 12, 16].includes(i)
                     ? "text-amber-400 font-bold"
                     : "text-gray-400"
@@ -171,51 +166,53 @@ export default function Home() {
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: "100%", opacity: 1 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                className="h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent max-w-[200px]"
+                transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
+                className="h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent max-w-[200px] mt-4"
               />
             )}
           </div>
-          {/* Input Section - Now nested to match branding width - w-0 min-w-full prevents parent growth */}
-          <div className="mt-2 min-h-[80px] flex items-center justify-center w-0 min-w-full">
-            <AnimatePresence>
-              {animStage >= 4 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full bg-white/[0.03] backdrop-blur-2xl border border-white/10 p-1 rounded-2xl shadow-2xl transition-colors duration-300 hover:bg-white/[0.05] hover:border-white/20 group/input"
-                >
-                  <div className="flex flex-col md:flex-row items-center gap-1">
-                    <div className="flex-1 w-full px-4 py-3 flex items-center gap-3">
-                      <Sparkles
-                        size={18}
-                        className="text-amber-500 transition-transform group-hover/input:rotate-12"
-                      />
-                      <input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && go()}
-                        placeholder="Dein Name..."
-                        className="w-full bg-transparent text-xl placeholder-gray-600 focus:outline-none text-white font-light tracking-wide"
-                        autoFocus
-                      />
-                    </div>
-
-                    <button
-                      onClick={go}
-                      disabled={!name.trim()}
-                      className="w-full md:w-auto px-6 py-3 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-amber-400 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 text-sm md:text-base"
-                    >
-                      Eintreten <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
+
+        {/* Input Section */}
+        <div className="w-full max-w-md min-h-[80px] flex items-center justify-center mt-4">
+          <AnimatePresence>
+            {animStage >= 4 && (
+              <motion.div
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full bg-white/[0.03] backdrop-blur-2xl border border-white/10 p-1 rounded-2xl shadow-2xl transition-colors duration-300 hover:bg-white/[0.05] hover:border-white/20 group/input"
+              >
+                <div className="flex flex-col md:flex-row items-center gap-1">
+                  <div className="flex-1 w-full px-4 py-3 flex items-center gap-3">
+                    <Sparkles
+                      size={18}
+                      className="text-amber-500 transition-transform group-hover/input:rotate-12"
+                    />
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && go()}
+                      placeholder="Dein Name..."
+                      className="w-full bg-transparent text-xl placeholder-gray-600 focus:outline-none text-white font-light tracking-wide"
+                    // autoFocus removed
+                    />
+                  </div>
+
+                  <button
+                    onClick={go}
+                    disabled={!name.trim()}
+                    className="w-full md:w-auto px-6 py-3 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-amber-400 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 text-sm md:text-base"
+                  >
+                    Eintreten <ArrowRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
       </motion.div>
 
       {/* Bottom Reflection */}
