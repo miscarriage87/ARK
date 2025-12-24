@@ -20,9 +20,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export const dynamic = 'force-dynamic';
 
+import { notFound } from "next/navigation";
+
+// ... imports
+
 export default async function UserPage({ params }: Props) {
     const { username } = await params;
     const decodedName = decodeURIComponent(username);
+
+    // Safety Net: Ignore requests that look like files (e.g. missing images)
+    // This prevents the "UserPage Loading for: apple-touch-icon.png" issue
+    if (decodedName.match(/\.(png|jpg|jpeg|gif|ico|svg|json|webmanifest)$/i)) {
+        return notFound();
+    }
+
     console.log(`[UserPage] Loading for: ${decodedName}`);
 
     // 1. Try to find user by Name
