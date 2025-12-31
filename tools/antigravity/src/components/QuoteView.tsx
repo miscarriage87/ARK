@@ -1,11 +1,14 @@
-import { getDailyQuote } from "@/lib/ai-service";
+"use client";
+
 import CalendarLeaf from "@/components/CalendarLeaf";
 import UserHeader from "@/components/UserHeader";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import BackgroundGlow from "@/components/BackgroundGlow";
 import IntroSequence from "@/components/ui/IntroSequence";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import { useEffect, useState } from "react";
+import { fetchDailyQuoteAction } from "@/app/actions";
 
-// Define strict types for the User object as expected by sub-components
 type QuoteViewProps = {
     user: {
         id: string;
@@ -17,11 +20,40 @@ type QuoteViewProps = {
     };
 };
 
-export default async function QuoteView({ user }: QuoteViewProps) {
-    // This is the SLOW part (30-60s)
-    // By putting it here, we allow the parent (page.tsx) to Suspend this component
-    const quote = await getDailyQuote(user.id);
-    const now = new Date().toISOString();
+export default function QuoteView({ user }: QuoteViewProps) {
+    const [data, setData] = useState<{ quote: any; date: string } | null>(null);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function load() {
+            const res = await fetchDailyQuoteAction(user.id);
+            if (!mounted) return;
+
+            if (res.success && res.quote) {
+                setData({ quote: res.quote, date: res.date });
+            } else {
+                setError(true);
+            }
+        }
+
+        load();
+
+        return () => { mounted = false; };
+    }, [user.id]);
+
+    // If we have data, we show the full leaf.
+    // If not, we show the IntroSequence + Header + BACKGROUND + Loading Screen.
+    // Why IntroSequence? Because we want the "Logo" to be there waiting.
+    // Actually, LoadingScreen HAS the logo.
+
+    // Strategy:
+    // 1. Initial Render: IntroSequence (Reveal=false) -> Background -> Header -> LoadingScreen (Visible).
+    // 2. Data Loaded: LoadingScreen fades out? 
+
+    // Wait, IntroSequence handles the "Reveal".
+    // If we use IntroSequence, it starts hidden.
 
     return (
         <IntroSequence>
@@ -30,7 +62,18 @@ export default async function QuoteView({ user }: QuoteViewProps) {
             <UserHeader user={user} />
 
             <AnimatedPageContainer>
-                <CalendarLeaf quote={quote} dateStr={now} userId={user.id} />
+                {data ? (
+                    <CalendarLeaf quote={data.quote} dateStr={data.date} userId={user.id} />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+                        {/* 
+                           We PLACE the LoadingScreen here. 
+                           Since this component is inside Page -> Main, it covers the screen.
+                           The 'fixed inset-0' in LoadingScreen handles the positioning.
+                        */}
+                        <LoadingScreen />
+                    </div>
+                )}
             </AnimatedPageContainer>
 
             {/* Bottom Subtle Reflection */}
