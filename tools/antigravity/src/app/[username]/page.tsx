@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma";
 import Onboarding from "@/components/Onboarding";
 import IntroSequence from "@/components/ui/IntroSequence";
 import { Metadata } from "next";
-import { Suspense } from "react";
-import LoadingScreen from "@/components/ui/LoadingScreen";
 import QuoteView from "@/components/QuoteView";
 import { notFound } from "next/navigation";
 
@@ -71,12 +69,11 @@ export default async function UserPage({ params }: Props) {
         preferences: user.preferences
     };
 
-    // We wrap the slow QuoteView in Suspense so the LoadingScreen shows immediately.
+    // We use the Client Component QuoteView to handle the fetching without blocking the initial render.
+    // This bypasses Proxy Buffering (Apache/Nginx) issues.
     return (
         <main className="min-h-screen bg-[#050505] text-white font-sans overflow-hidden flex flex-col items-center justify-center p-6 relative">
-            <Suspense fallback={<LoadingScreen />}>
-                <QuoteView user={cleanUser} />
-            </Suspense>
+            <QuoteView user={cleanUser} />
         </main>
     );
 }
