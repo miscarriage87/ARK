@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { getDailyQuote } from "@/lib/ai-service";
-import CalendarLeaf from "@/components/CalendarLeaf";
 import Onboarding from "@/components/Onboarding";
-import UserHeader from "@/components/UserHeader";
-import AnimatedPageContainer from "@/components/AnimatedPageContainer";
-import BackgroundGlow from "@/components/BackgroundGlow";
 import IntroSequence from "@/components/ui/IntroSequence";
 import { Metadata } from "next";
+import { Suspense } from "react";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import QuoteView from "@/components/QuoteView";
+import { notFound } from "next/navigation";
 
 type Props = {
     params: Promise<{ username: string }>;
@@ -20,8 +19,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export const dynamic = 'force-dynamic';
-
-import { notFound } from "next/navigation";
 
 // ... imports
 
@@ -58,24 +55,28 @@ export default async function UserPage({ params }: Props) {
         );
     }
 
-    // 3. User exists -> Get Quote
-    const quote = await getDailyQuote(user.id);
-    const now = new Date().toISOString();
+    // 3. User exists -> Prepare Data for Suspended View
+    // We need to parse 'interests' from the JSON preferences because QuoteView expects a strict array.
+    let interests: string[] = [];
+    if (user.preferences && typeof user.preferences === 'object' && !Array.isArray(user.preferences)) {
+        const prefs = user.preferences as any;
+        if (Array.isArray(prefs.interests)) {
+            interests = prefs.interests as string[];
+        }
+    }
 
+    const cleanUser = {
+        ...user,
+        interests,
+        preferences: user.preferences
+    };
+
+    // We wrap the slow QuoteView in Suspense so the LoadingScreen shows immediately.
     return (
         <main className="min-h-screen bg-[#050505] text-white font-sans overflow-hidden flex flex-col items-center justify-center p-6 relative">
-            <IntroSequence>
-                <BackgroundGlow />
-
-                <UserHeader user={user} />
-
-                <AnimatedPageContainer>
-                    <CalendarLeaf quote={quote} dateStr={now} userId={user.id} />
-                </AnimatedPageContainer>
-
-                {/* Bottom Subtle Reflection */}
-                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-amber-500/5 to-transparent pointer-events-none" />
-            </IntroSequence>
+            <Suspense fallback={<LoadingScreen />}>
+                <QuoteView user={cleanUser} />
+            </Suspense>
         </main>
     );
 }
