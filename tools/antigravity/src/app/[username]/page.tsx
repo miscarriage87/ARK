@@ -5,6 +5,7 @@ import Onboarding from "@/components/Onboarding";
 import UserHeader from "@/components/UserHeader";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import BackgroundGlow from "@/components/BackgroundGlow";
+import IntroSequence from "@/components/ui/IntroSequence";
 import { Metadata } from "next";
 
 type Props = {
@@ -14,7 +15,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { username } = await params;
     return {
-        title: `DARK | ${decodeURIComponent(username)}`,
+        title: `dArk | ${decodeURIComponent(username)}`,
     }
 }
 
@@ -63,16 +64,18 @@ export default async function UserPage({ params }: Props) {
 
     return (
         <main className="min-h-screen bg-[#050505] text-white font-sans overflow-hidden flex flex-col items-center justify-center p-6 relative">
-            <BackgroundGlow />
+            <IntroSequence>
+                <BackgroundGlow />
 
-            <UserHeader user={user} />
+                <UserHeader user={user} />
 
-            <AnimatedPageContainer>
-                <CalendarLeaf quote={quote} dateStr={now} userId={user.id} />
-            </AnimatedPageContainer>
+                <AnimatedPageContainer>
+                    <CalendarLeaf quote={quote} dateStr={now} userId={user.id} />
+                </AnimatedPageContainer>
 
-            {/* Bottom Subtle Reflection */}
-            <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-amber-500/5 to-transparent pointer-events-none" />
+                {/* Bottom Subtle Reflection */}
+                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-amber-500/5 to-transparent pointer-events-none" />
+            </IntroSequence>
         </main>
     );
 }

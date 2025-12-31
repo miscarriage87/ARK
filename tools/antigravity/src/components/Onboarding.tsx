@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 import styles from "./Onboarding.module.css";
 
 const INTERESTS = ["Achtsamkeit", "Spiritualität", "Stoizismus", "Unternehmertum", "Wissenschaft", "Kunst", "Poesie", "Führung", "Wellness"];
@@ -75,102 +76,106 @@ export default function Onboarding({ initialName }: OnboardingProps) {
     // We just need interests.
 
     return (
-        <div className={styles.card}>
-            {/* Progress Bar */}
-            <div className={styles.progressBarContainer}>
-                <motion.div
-                    className={styles.progressBarFill}
-                    initial={{ width: "0%" }}
-                    animate={{ width: loading ? `${fakeProgress}%` : (step === 0 ? "50%" : "100%") }}
-                    style={{
-                        backgroundColor: loading ? 'hsl(var(--primary))' : undefined,
-                        boxShadow: loading ? '0 0 20px hsl(var(--primary)/0.5)' : undefined
-                    }}
-                />
-            </div>
-
-            <AnimatePresence mode="wait">
-                {step === 0 && (
+        <>
+            <AnimatePresence>
+                {loading && (
                     <motion.div
-                        key="step1"
-                        variants={variants}
-                        initial="enter" animate="center" exit="exit"
-                        className={styles.stepContainer}
+                        key="loader"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200]"
                     >
-                        <h2 className={styles.heading}>Was inspiriert dich?</h2>
-                        <p className={styles.subtext}>Wähle maximal drei Kategorien für deine tägliche Inspiration.</p>
-
-                        <div className={styles.chipContainer} style={{ zIndex: 10, position: 'relative' }}>
-                            {INTERESTS.map(item => (
-                                <div key={item} className="flex flex-col items-center">
-                                    <button
-                                        onClick={() => toggleInterest(item)}
-                                        disabled={loading}
-                                        type="button"
-                                        className={`${styles.chip} ${selections.includes(item) ? styles.chipSelected : ""} ${(!selections.includes(item) && selections.length >= 3) || loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                                    >
-                                        {item}
-                                    </button>
-                                    {item === "Stoizismus" && (
-                                        <span className="text-[10px] text-gray-500 mt-1 italic whitespace-nowrap">Gelassenheit durch Vernunft</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-8 flex flex-col items-center gap-4">
-                            <button
-                                onClick={() => {
-                                    if (initialName) {
-                                        submitProfile(); // Skip name step if known
-                                    } else {
-                                        setStep(1);
-                                    }
-                                }}
-                                disabled={selections.length === 0 || loading}
-                                className={`${styles.button} ${styles.buttonNext} ${loading ? 'opacity-70' : ''}`}
-                                style={{ zIndex: 20, position: 'relative' }}
-                            >
-                                {loading ? "Einen Moment..." : (initialName ? "Los geht's..." : "Weiter")}
-                            </button>
-
-                            {!loading && (
-                                <p className="text-[11px] text-gray-400 opacity-60">
-                                    Deine Auswahl kannst du später jederzeit im Menü anpassen.
-                                </p>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-
-                {step === 1 && !initialName && (
-                    <motion.div
-                        key="step2"
-                        variants={variants}
-                        initial="enter" animate="center" exit="exit"
-                        className={styles.stepContainer}
-                    >
-                        <h2 className={styles.heading}>Wie sollen wir dich nennen?</h2>
-                        <p className={styles.subtext}>Optional, aber nett.</p>
-
-                        <input
-                            type="text"
-                            placeholder="Dein Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className={styles.input}
-                        />
-
-                        <button
-                            onClick={submitProfile}
-                            disabled={loading}
-                            className={styles.button}
-                        >
-                            {loading ? "Profil wird erstellt..." : "Reise starten"}
-                        </button>
+                        <LoadingScreen />
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+
+            <div className={styles.card}>
+
+                <AnimatePresence mode="wait">
+                    {step === 0 && (
+                        <motion.div
+                            key="step1"
+                            variants={variants}
+                            initial="enter" animate="center" exit="exit"
+                            className={styles.stepContainer}
+                        >
+                            <h2 className={styles.heading}>Was inspiriert dich?</h2>
+                            <p className={styles.subtext}>Wähle maximal drei Kategorien für deine tägliche Inspiration.</p>
+
+                            <div className={styles.chipContainer} style={{ zIndex: 10, position: 'relative' }}>
+                                {INTERESTS.map(item => (
+                                    <div key={item} className="flex flex-col items-center">
+                                        <button
+                                            onClick={() => toggleInterest(item)}
+                                            disabled={loading}
+                                            type="button"
+                                            className={`${styles.chip} ${selections.includes(item) ? styles.chipSelected : ""} ${(!selections.includes(item) && selections.length >= 3) || loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                                        >
+                                            {item}
+                                        </button>
+                                        {item === "Stoizismus" && (
+                                            <span className="text-[10px] text-gray-500 mt-1 italic whitespace-nowrap">Gelassenheit durch Vernunft</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 flex flex-col items-center gap-4">
+                                <button
+                                    onClick={() => {
+                                        if (initialName) {
+                                            submitProfile(); // Skip name step if known
+                                        } else {
+                                            setStep(1);
+                                        }
+                                    }}
+                                    disabled={selections.length === 0 || loading}
+                                    className={`${styles.button} ${styles.buttonNext} ${loading ? 'opacity-70' : ''}`}
+                                    style={{ zIndex: 20, position: 'relative' }}
+                                >
+                                    {loading ? "Einen Moment..." : (initialName ? "Los geht's..." : "Weiter")}
+                                </button>
+
+                                {!loading && (
+                                    <p className="text-[11px] text-gray-400 opacity-60">
+                                        Deine Auswahl kannst du später jederzeit im Menü anpassen.
+                                    </p>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {step === 1 && !initialName && (
+                        <motion.div
+                            key="step2"
+                            variants={variants}
+                            initial="enter" animate="center" exit="exit"
+                            className={styles.stepContainer}
+                        >
+                            <h2 className={styles.heading}>Wie sollen wir dich nennen?</h2>
+                            <p className={styles.subtext}>Optional, aber nett.</p>
+
+                            <input
+                                type="text"
+                                placeholder="Dein Name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className={styles.input}
+                            />
+
+                            <button
+                                onClick={submitProfile}
+                                disabled={loading}
+                                className={styles.button}
+                            >
+                                {loading ? "Profil wird erstellt..." : "Reise starten"}
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </>
     );
 }
