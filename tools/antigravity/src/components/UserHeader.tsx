@@ -17,8 +17,8 @@ export default function UserHeader({ user }: UserHeaderProps) {
 
     return (
         <>
-            <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-                <div className="w-full max-w-[450px] flex justify-between items-center px-0 py-8 md:py-12 pointer-events-auto">
+            <div className="w-full z-50 flex justify-center pointer-events-none mb-4 md:mb-8 shrink-0">
+                <div className="w-full max-w-[450px] flex justify-between items-end px-0 pointer-events-auto">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -38,12 +38,22 @@ export default function UserHeader({ user }: UserHeaderProps) {
                             </svg>
                         </motion.div>
 
-                        <Link
-                            href="/"
-                            className="text-sm font-bold tracking-[0.35em] opacity-70 text-white select-none hover:opacity-100 transition-opacity cursor-pointer"
-                        >
-                            dArk
-                        </Link>
+                        <div className="flex items-end gap-2">
+                            <Link
+                                href="/"
+                                className="text-sm font-bold tracking-[0.35em] opacity-70 text-white select-none hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                                dArk
+                            </Link>
+
+                            {/* Version Badge */}
+                            <Link
+                                href="/changelog"
+                                className="text-[10px] font-mono text-amber-500/60 hover:text-amber-400 transition-colors border border-amber-500/20 rounded px-1.5 py-0.5 hover:bg-amber-500/10 hover:border-amber-500/40 mb-[1px]"
+                            >
+                                v1.1
+                            </Link>
+                        </div>
                     </motion.div>
 
                     <motion.div

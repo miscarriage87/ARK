@@ -3,7 +3,7 @@ import "../globals.css";
 import "./admin.css"; // Ensure global styles are applied
 
 export const metadata: Metadata = {
-    title: "ARK Admin",
+    title: "dArk | Adminbereich",
     description: "Administrative Backend",
 };
 

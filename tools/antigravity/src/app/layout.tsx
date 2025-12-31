@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ARK | Tägliche Weisheit",
+  title: "dArk | Tägliche Weisheit",
   description: "Dein personalisierter digitaler Abreißkalender.",
   appleWebApp: {
     capable: true,
