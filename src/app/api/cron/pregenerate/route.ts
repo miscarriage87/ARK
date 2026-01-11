@@ -10,7 +10,32 @@ import { getDailyQuote } from "@/lib/ai-service";
  * Zitate für alle User, die noch kein Zitat für morgen haben.
  *
  * Optional mit API-Key gesichert über Query-Parameter oder Header.
+ *
+ * Wichtig: Antwortet sofort und führt Generierung im Hintergrund aus,
+ * um Timeouts zu vermeiden.
  */
+
+// Hintergrund-Generierung (wird nicht awaited)
+async function generateInBackground(users: { id: string; name: string }[], dateStr: string) {
+    const startTime = Date.now();
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const user of users) {
+        try {
+            console.log(`[Cron] Generiere für User ${user.name} (${user.id})`);
+            await getDailyQuote(user.id, dateStr);
+            successCount++;
+        } catch (error) {
+            console.error(`[Cron] Fehler bei User ${user.id}:`, error);
+            errorCount++;
+        }
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[Cron] Abgeschlossen in ${duration}ms: ${successCount} generiert, ${errorCount} Fehler`);
+}
+
 export async function GET(req: NextRequest) {
     // Optional: API-Key Validierung
     const apiKey = req.headers.get("x-cron-key") || req.nextUrl.searchParams.get("key");
@@ -24,8 +49,6 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const startTime = Date.now();
-
         // Berechne morgen
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -49,34 +72,27 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        console.log(`[Cron] ${usersWithoutTomorrow.length} User ohne Zitat für ${tomorrowStr}`);
+        const userCount = usersWithoutTomorrow.length;
+        console.log(`[Cron] ${userCount} User ohne Zitat für ${tomorrowStr}`);
 
-        const results: { userId: string; status: string }[] = [];
-
-        // Generiere für jeden User
-        for (const user of usersWithoutTomorrow) {
-            try {
-                console.log(`[Cron] Generiere für User ${user.name} (${user.id})`);
-                await getDailyQuote(user.id, tomorrowStr);
-                results.push({ userId: user.id, status: "generated" });
-            } catch (error) {
-                console.error(`[Cron] Fehler bei User ${user.id}:`, error);
-                results.push({ userId: user.id, status: "error" });
-            }
+        if (userCount === 0) {
+            return NextResponse.json({
+                status: "ok",
+                message: "Keine User zu generieren",
+                date: tomorrowStr,
+                pending: 0
+            });
         }
 
-        const duration = Date.now() - startTime;
-        const successCount = results.filter(r => r.status === "generated").length;
-        const errorCount = results.filter(r => r.status === "error").length;
+        // Starte Generierung im Hintergrund (ohne await!)
+        generateInBackground(usersWithoutTomorrow, tomorrowStr);
 
-        console.log(`[Cron] Abgeschlossen in ${duration}ms: ${successCount} generiert, ${errorCount} Fehler`);
-
+        // Antworte sofort
         return NextResponse.json({
+            status: "started",
+            message: `Generierung für ${userCount} User gestartet`,
             date: tomorrowStr,
-            total: usersWithoutTomorrow.length,
-            generated: successCount,
-            errors: errorCount,
-            duration: `${duration}ms`
+            pending: userCount
         });
 
     } catch (error) {
