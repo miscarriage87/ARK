@@ -173,7 +173,7 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
                 temperature: 1.0,
                 modeWeights: { quote: 50, question: 30, pulse: 20 },
                 masterPrompt: "",
-                model: "gpt-5" // Default to High-End Model (Future Proof)
+                model: "gpt-5.4" // Default to High-End Model (Future Proof)
             };
 
             if (user?.aiConfig) {

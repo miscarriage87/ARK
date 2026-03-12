@@ -4,98 +4,152 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**dArk** (interner Name: "Antigravity") ist eine personalisierte Tages-Inspirations-App. Nutzer erhalten täglich KI-generierte Zitate, Reflexionsfragen oder Impulse basierend auf ihren Interessen.
+**dArk** (internal name: "Antigravity") is a personalized daily inspiration app. Users receive AI-generated quotes, reflection questions, or impulses based on their interests — one per day, cached.
 
 ## Commands
 
 ```bash
-npm run dev          # Entwicklungsserver starten (Next.js)
-npm run build        # Produktionsbuild erstellen
-npm run lint         # ESLint ausführen
-npm run deploy       # Prisma Migrationen ausführen (prisma migrate deploy)
+npm run dev          # Start dev server (Next.js)
+npm run build        # Production build
+npm run start        # Run production server
+npm run lint         # ESLint
+npm run db:check     # Check database connectivity
+npm run db:generate  # Regenerate Prisma client
+npm run db:migrate   # Run prisma migrate deploy (production migrations)
 ```
 
-### Datenbank
+### Database
 ```bash
-npx prisma studio    # Datenbank-GUI öffnen
-npx prisma generate  # Prisma Client neu generieren (nach schema.prisma Änderungen)
-npx prisma migrate dev --name <name>  # Neue Migration erstellen
+npx prisma studio                        # Database GUI
+npx prisma generate                      # Regenerate client (after schema.prisma changes)
+npx prisma migrate dev --name <name>     # Create new migration (development)
+```
+
+### Utility Scripts
+```bash
+npx tsx scripts/seed-ai.ts               # Seed DB with test users + 5-day quote history
+npx tsx scripts/backfill-date.ts         # Generate a single quote for specific user+date
 ```
 
 ## Architecture
 
 ### Tech Stack
-- **Next.js 16** (App Router) mit TypeScript
-- **SQLite** + Prisma ORM
-- **OpenAI API** für Zitat-Generierung
-- **CSS Modules** + globale CSS-Variablen (kein Tailwind für Komponenten-Styling)
-- **Framer Motion** für Animationen
+- **Next.js 16** (App Router) with TypeScript + React 19
+- **SQLite** + Prisma ORM (WAL mode)
+- **OpenAI API** (gpt-5/gpt-4o) for quote generation
+- **CSS Modules** + global CSS variables for component styling
+- **Tailwind CSS** available (in devDependencies) but components use CSS Modules
+- **Framer Motion** for animations, **Lucide React** for icons
+- **Zod** for input validation in admin API routes
 
-### Kernkonzept: Tägliches Zitat pro User
+### Core Flow: Daily Quote per User
 
-Der Hauptfluss (`src/lib/ai-service.ts:getDailyQuote`):
-1. Prüft ob User heute bereits ein Zitat gesehen hat (`DailyView` Tabelle)
-2. Falls ja: Cached Zitat zurückgeben
-3. Falls nein: Neues Zitat via OpenAI generieren mit:
-   - Zufälliger Modus-Auswahl (QUOTE/QUESTION/PULSE) basierend auf Gewichtung
-   - User-Interessen als Kategorie
-   - History-Kompression (`HistoryCompressor`) um Wiederholungen zu vermeiden
-   - Kategorie-spezifische Style-Guides für den Prompt
+Entry point: `src/lib/ai-service.ts:getDailyQuote(userId, forcedDate?)`
 
-### Datenmodell (prisma/schema.prisma)
+1. Check `DailyView` table for user+date → return cached quote if exists
+2. Fetch user preferences + optional admin AI config override
+3. Weighted random mode selection: QUOTE (50), QUESTION (30), PULSE (20)
+4. Pick random category from user interests
+5. Compress history via `HistoryCompressor` → banned authors/concepts blocklist
+6. Build prompt with `{{MODE}}`, `{{CATEGORY}}`, `{{INTERESTS}}`, `{{HISTORY_CODE}}` substitutions
+7. Call OpenAI → parse JSON response → save Quote + create DailyView record
 
-- **User**: Profil mit JSON-`preferences` (Interessen) und optionalem `aiConfig` (Admin-Override für Temperatur, Prompt, Model)
-- **Quote**: Generierte Inhalte mit `concepts` (JSON-Array erklärbarer Begriffe)
-- **DailyView**: Verknüpft User+Quote+Datum (unique constraint auf userId+date)
-- **Rating/Share**: Tracking für Likes und Shares
+**Race condition handling**: Multiple simultaneous requests for same user+date are handled via Prisma P2002 unique constraint error — loser fetches the winner's quote.
 
-### Routing-Struktur
+### CRON / Background Pregeneration
 
-- `/[username]` - Haupt-Nutzerseite, zeigt Onboarding oder QuoteView
-- `/[username]/archive` - Archiv vergangener Zitate
-- `/admin` - Login-Seite
-- `/admin/dashboard` - User-Verwaltung und AI-Konfiguration pro User
-- `/api/quote/daily` - POST für Onboarding, GET für Zitat-Abruf
-- `/api/quote/rate` - Bewertungs-Endpoint
+Two mechanisms ensure quotes are ready before users visit:
 
-### AI-Prompt System (`src/lib/ai-service.ts`)
+1. **Server-side CRON** (`/api/cron/pregenerate`):
+   - Called by external scheduler (e.g., daily at 03:00)
+   - Secured via `CRON_API_KEY` (header `x-cron-key` or query `?key=`)
+   - Responds immediately, runs generation in background (fire-and-forget)
+   - Generates tomorrow's quotes for all onboarded users missing one
 
-Exportierte Konstanten für Admin-Sichtbarkeit:
-- `CATEGORY_STYLE_GUIDE` - Stilregeln pro Kategorie (Achtsamkeit, Stoizismus, etc.)
-- `ARCHETYPES_FOR_MODE` - Archetypenliste pro Modus
-- `MODE_INSTRUCTIONS` - Spezifische Instruktionen für QUOTE/QUESTION/PULSE
-- `DEFAULT_MASTER_PROMPT` - Haupt-Prompt-Template mit Platzhaltern ({{MODE}}, {{CATEGORY}}, etc.)
+2. **Client-side trigger** (`/api/quote/pregenerate`):
+   - `QuoteView` component triggers after displaying today's quote
+   - SessionStorage dedup flag prevents multiple calls per session
+   - Generates tomorrow's quote for current user only
 
-Der `HistoryCompressor` (`src/lib/history-compressor.ts`) generiert einen komprimierten Blocklist-String aus vergangenen Autoren und Konzepten, um Wiederholungen zu vermeiden.
+### Data Model (prisma/schema.prisma)
+
+- **User**: Profile with JSON `preferences` (interests array) and optional `aiConfig` (admin override for temperature, prompt, model, modeWeights)
+- **Quote**: Generated content with `concepts` (JSON array of explainable terms), `sourceModel`, `category`
+- **DailyView**: Links User+Quote+Date. Unique constraint on `(userId, date)` — core caching mechanism
+- **Rating/Share**: Tracking for likes and shares (unique per user+quote)
+
+### Routing Structure
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Animated landing/intro page |
+| `/[username]` | Main user page (SSR) — shows Onboarding or QuoteView |
+| `/[username]/archive` | Archive of past quotes |
+| `/admin` | Admin login page |
+| `/admin/dashboard` | User management + system context |
+| `/admin/user/[id]` | Per-user AI config (temperature, prompt, model) |
+
+### API Routes
+
+| Route | Method | Auth | Purpose |
+|-------|--------|------|---------|
+| `/api/quote/daily` | GET | x-user-id header | Fetch today's quote |
+| `/api/quote/daily` | POST | x-user-id header | Onboarding (create/update user + generate) |
+| `/api/quote/pregenerate` | POST | None (client dedup) | Trigger tomorrow's generation for user |
+| `/api/quote/rate` | POST | x-user-id or cookie | Rate a quote |
+| `/api/admin/login` | POST | Rate-limited (5/15min) | Admin auth → sets `admin_session` cookie |
+| `/api/admin/user/[id]` | GET/PUT | admin_session cookie | User data + AI config CRUD |
+| `/api/admin/user/[id]/preview-prompt` | GET | admin_session cookie | Preview generated prompt |
+| `/api/cron/pregenerate` | GET | x-cron-key header | Cron: pregenerate all users |
+
+### AI Prompt System (`src/lib/ai-service.ts`)
+
+Exported constants (visible in admin dashboard):
+- `CATEGORY_STYLE_GUIDE` — style rules per category (Achtsamkeit, Stoizismus, Wissenschaft, etc.)
+- `ARCHETYPES_FOR_MODE` — archetype lists per mode (QUOTE/QUESTION/PULSE)
+- `MODE_INSTRUCTIONS` — mode-specific behavior instructions
+- `DEFAULT_MASTER_PROMPT` — main prompt template with `{{PLACEHOLDER}}` substitutions
+
+Admin can override per user: `aiConfig.masterPrompt`, `temperature`, `modeWeights`, `model`.
+
+### History Compression (`src/lib/history-compressor.ts`)
+
+- Scans last 100 DailyViews for a user
+- Bans top 20 frequent concepts + 10 most recent concepts
+- Bans all previously seen authors
+- **Protected terms**: User interests are NEVER added to the ban list
+
+### Auth
+
+- **User sessions**: `ark_user_id` cookie (365 days, sameSite=strict), created on onboarding POST
+- **Admin sessions**: `admin_session` cookie (httpOnly, secure in prod, 24h), created via `crypto.randomBytes(32)`
+- **Rate limiting**: In-memory Map (IP → {count, resetAt}), max 5 attempts per 15 minutes
 
 ## Environment Variables
 
 ```
 DATABASE_URL="file:./dev.db"
-OPENAI_API_KEY="..."
-ADMIN_PASSWORD="..."  # Passwort für Admin-Login
+OPENAI_API_KEY="sk-..."
+ADMIN_PASSWORD="..."           # Admin login password
+CRON_API_KEY="..."             # Optional: secures /api/cron/pregenerate
 ```
-
-## Shared Utilities (`src/lib/`)
-
-- **`constants.ts`** - Zentrale Konstanten (INTERESTS, MAX_INTERESTS, AI_MODES)
-- **`types.ts`** - TypeScript-Typen (User, Quote, UserPreferences, AIConfig, etc.)
-- **`utils.ts`** - Utility-Funktionen:
-  - `safeJsonParse<T>()` - Sicheres JSON-Parsing mit Fallback
-  - `isValidUUID()` - UUID-Format-Validierung
-  - `logger` - Environment-aware Logger (unterdrückt Debug in Production)
 
 ## Key Patterns
 
-- **Server Actions** (`src/app/actions.ts`) für serverseitige Zitat-Generierung
-- **Client Components** für interaktive UI (QuoteView, Onboarding) mit `"use client"`
-- **Admin-Auth** via Cookie-basierter Session mit Session-Token und Rate-Limiting
-- **Input-Validierung** via Zod in Admin-API-Routes
-- **Race Condition Handling** in `getDailyQuote` bei gleichzeitigen Requests (P2002 Error)
+- **Server Actions** (`src/app/actions.ts`) for server-side quote generation from client components
+- **Client Components** (`"use client"`) for interactive UI (QuoteView, Onboarding, overlays)
+- **JSON columns** in Prisma for flexible `preferences` and `aiConfig` — parsed with `safeJsonParse<T>()`
+- **Fire-and-forget** background generation in CRON endpoint (no await, immediate response)
+- **PWA** support via `src/app/manifest.ts`
+- **Custom server** (`server.js`) wraps Next.js HTTP handler
 
-## Nach Schema-Änderungen
+## Shared Utilities (`src/lib/`)
 
-```bash
-npx prisma migrate dev --name <beschreibung>  # Migration erstellen
-npx prisma generate                            # Client regenerieren
-```
+- **`constants.ts`** — INTERESTS array, MAX_INTERESTS, AI_MODES, APP_VERSION
+- **`types.ts`** — TypeScript types (User, Quote, UserPreferences, AIConfig, etc.)
+- **`utils.ts`** — `safeJsonParse<T>()`, `isValidUUID()`, environment-aware `logger`
+- **`prisma.ts`** — Prisma singleton instance
+
+## Testing
+
+No test infrastructure exists yet. No test runner configured.
