@@ -28,10 +28,15 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Prisma
+# Prisma / SQLite
 prisma/dev.db
 prisma/dev.db-journal
+prisma/dev.db-wal
+*.db-wal
 
 # Claude
 .claude/
 prisma/*.db
+
+# Environment template is tracked, actual env is not
+!.env.example
