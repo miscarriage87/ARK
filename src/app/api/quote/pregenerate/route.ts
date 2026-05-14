@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
+import { cookies } from "next/headers";
+import { addDays, formatAppDate, isValidUUID } from "@/lib/utils";
 
 /**
  * POST /api/quote/pregenerate
@@ -12,18 +14,24 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { userId } = body;
+        const cookieUserId = (await cookies()).get("ark_user_id")?.value;
 
-        if (!userId) {
+        if (!userId || typeof userId !== "string" || !isValidUUID(userId)) {
             return NextResponse.json(
                 { error: "userId ist erforderlich" },
                 { status: 400 }
             );
         }
 
-        // Berechne morgen
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        if (!cookieUserId || cookieUserId !== userId) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
+        // Berechne morgen in der App-Zeitzone
+        const tomorrowStr = formatAppDate(addDays(new Date(), 1));
 
         // Prüfe ob bereits existiert
         const existing = await prisma.dailyView.findUnique({

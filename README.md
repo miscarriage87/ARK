@@ -1,12 +1,12 @@
 # dArk — Daily Inspiration, Personally Crafted
 
-**dArk** (codename _Antigravity_) is a personalized daily inspiration app. Each day, users receive an AI-generated quote, reflection question, or creative impulse — tailored to their interests and never repeating.
+**dArk** (codename _Antigravity_) is a personalized daily inspiration app. Each day, users receive an AI-generated quote, reflection question, or creative impulse — tailored to their interests and selected through a history-aware variety engine.
 
 ## Features
 
 - **One inspiration per day** — quote, question, or impulse, selected by weighted random mode
 - **Personalized content** — AI generates based on user interests and categories
-- **History-aware** — a compression algorithm ensures no repeated authors or concepts
+- **History-aware variety** — deterministic daily plans, multiple candidates, and novelty scoring reduce repetition
 - **Pregeneration** — CRON job generates tomorrow's content overnight
 - **PWA-ready** — installable on mobile devices
 - **Admin dashboard** — per-user AI config (temperature, prompt, model, mode weights)
@@ -19,7 +19,7 @@
 | Framework  | [Next.js 16](https://nextjs.org/) (App Router)              |
 | Language   | TypeScript, React 19                                        |
 | Database   | SQLite + [Prisma ORM](https://www.prisma.io/) (WAL mode)    |
-| AI         | [OpenAI API](https://platform.openai.com/) (GPT-5 / GPT-4o) |
+| AI         | [OpenAI API](https://platform.openai.com/) (GPT-5.4 / GPT-5.5 model routing) |
 | Styling    | CSS Modules + CSS Variables                                 |
 | Animations | [Framer Motion](https://www.framer.com/motion/)             |
 | Icons      | [Lucide React](https://lucide.dev/)                         |
@@ -116,10 +116,10 @@ prisma/
 ## How It Works
 
 1. User visits `/<username>` — if no quote exists for today, one is generated
-2. The AI selects a mode (Quote 50% / Question 30% / Impulse 20%) and a random category from user interests
+2. The app builds a deterministic `InspirationPlan` for the user/date with mode, category, format, tone, imagery world, and rhetorical device
 3. History compression scans the last 100 views to build a blocklist of used authors and concepts
-4. The prompt is assembled with category-specific style guides and mode instructions
-5. OpenAI generates structured JSON — the response is saved and displayed
+4. Multiple prompt lanes generate candidate inspirations with Structured Outputs
+5. Local novelty scoring compares candidates against recent history and stores the highest-scoring winner with variety metadata
 6. A background job pregenerates tomorrow's content for all users overnight
 
 ## License

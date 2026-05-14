@@ -1,13 +1,31 @@
 import OpenAI from "openai";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { HistoryCompressor } from "./history-compressor";
+import {
+    buildCandidatePlans,
+    buildInspirationPlan,
+    type InspirationPlan,
+    type ModeWeights,
+    type RecentInspirationSignal
+} from "./inspiration-plan";
+import {
+    QuoteCandidateSchema,
+    quoteCandidateResponseFormat,
+    type QuoteCandidate
+} from "./quote-output";
+import {
+    scoreQuoteCandidate,
+    type NoveltyScore,
+    type RecentQuoteForScoring
+} from "./novelty-scorer";
+import { formatAppDate, safeJsonParse, logger } from "./utils";
 
 const openai = process.env.OPENAI_API_KEY
     ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     : null;
 
-// Debug Log
-console.log("AI Service Init. Key present:", !!process.env.OPENAI_API_KEY);
+export const PROMPT_VERSION = "ark-variety-v1";
 
 // --- EXPORTED SYSTEM CONSTANTS (For Admin Visibility) ---
 
@@ -85,68 +103,458 @@ export const MODE_INSTRUCTIONS = {
 };
 
 export const DEFAULT_MASTER_PROMPT = `
-Du bist ein präziser, moderner Soul-Coach (geerdet, klar, nicht kitschig).
-Format heute: {{MODE}}. 
-Kategorie (THEMA): {{CATEGORY}} (Bleibe strikt in dieser Themenwelt).
+Du bist kein allgemeiner Sprüche-Automat. Du kuratierst einen digitalen Abreißkalender.
+Jeder Tag muss sich anders anfühlen: andere Bildwelt, andere Denkbewegung, anderer Ton.
 
-User-Interessen: {{INTERESTS}}.
+Format heute: {{MODE}}
+Kategorie: {{CATEGORY}}
+User-Interessen: {{INTERESTS}}
 
-KONTEXT: Der User hat schon viel konsumiert.
-Verbotene Autoren (A): {{BANNED_AUTHORS}}
-Vermeide Konzepte (C): {{BANNED_CONCEPTS}} (außer explizit in INTERESTS)
-HISTORY (letzte Outputs + Meta): {{HISTORY_CODE}}
-
-HARTREGELN (Anti-Klischee):
-- Kein Start mit: "Was hält dich davon ab", "Fühle", "In der Stille"
-- Vermeide: "Tauch ein", "Lass los", "Hier und Jetzt", "Atem", "Präsenz"
-- Keine Floskeln über "Seele/Universum" (außer Kategorie verlangt es explizit)
-- content muss kurz sein (70–140 Zeichen), stark, konkret.
-
-KATEGORIE-LINSE (entscheidend - hat Vorrang vor allem Anderen):
+KATEGORIE-LINSE:
 {{CATEGORY_STYLE_GUIDE}}
-
-DIVERSITÄTS-MOTOR:
-1) Wähle genau EINEN Archetyp aus der Liste für {{MODE}}: {{ARCHETYPES_FOR_MODE}}
-2) INSPIRATION für Bildwelten (Optional - nur nutzen wenn es zur Kategorie passt!):
-   Technik / Naturdetail / Körper (ohne Atem) / Beziehung / Arbeit / Stadt / Kindheit / Geld / Zeit / Risiko.
-   WICHTIG: Wenn die Bildwelt der Kategorie widerspricht (z.B. Technik bei Achtsamkeit), ignoriere sie und wähle eine kategorie-konforme Metapher.
-3) Check: Wenn Metapher ähnlich zu einem der letzten 7 Einträge: neu würfeln.
 
 MODE-INSTRUKTIONEN:
 {{MODE_INSTRUCTIONS}}
 
-ANALYSE (concepts):
-- Extrahiere 1–3 spannende Begriffe, die IM content vorkommen (Fremdwort/Konzept).
-- Wenn content sehr simpel ist: concepts = [].
+ANTI-KLISCHEE:
+- Kein Start mit: "Was hält dich davon ab", "Fühle", "In der Stille"
+- Vermeide: "Tauch ein", "Lass los", "Hier und Jetzt", "Atem", "Präsenz"
+- Keine Floskeln über "Seele/Universum" außer Kategorie verlangt es explizit.
+- content muss kurz sein (70-160 Zeichen), konkret, bildhaft und originell.
 
-Output JSON (exakt):
-{
-  "content": "...",
-  "author": "...",
-  "explanation": "... (2-3 Sätze, praktisch, nicht kitschig)",
-  "category": "{{CATEGORY}}",
-  "concepts": [ { "word": "...", "definition": "..." } ]
-}
+HISTORY:
+Verbotene Autoren: {{BANNED_AUTHORS}}
+Vermeide Konzepte: {{BANNED_CONCEPTS}}
+Letzte Einträge:
+{{RECENT_CONTENT}}
 `;
 
-export async function getDailyQuote(userId: string, forcedDate?: string) {
-    const today = forcedDate || new Date().toISOString().split("T")[0];
+type UserPreferences = {
+    interests?: string[];
+};
 
-    // 1. Check if user already saw a quote today
+type AIConfig = {
+    temperature: number;
+    modeWeights: ModeWeights;
+    masterPrompt: string;
+    model: string;
+    premiumModel: string;
+    fallbackModel: string;
+    candidateCount: number;
+};
+
+type GeneratedCandidate = {
+    candidate: QuoteCandidate;
+    plan: InspirationPlan;
+    score: NoveltyScore;
+    sourceModel: string;
+};
+
+const DEFAULT_AI_CONFIG: AIConfig = {
+    temperature: 1.0,
+    modeWeights: { quote: 50, question: 30, pulse: 20 },
+    masterPrompt: "",
+    model: "gpt-5.4-mini",
+    premiumModel: "gpt-5.5",
+    fallbackModel: "gpt-5.4-nano",
+    candidateCount: 3
+};
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
+function resolveAiConfig(rawConfig: string | null): AIConfig {
+    const parsed = safeJsonParse<Partial<AIConfig>>(rawConfig, {});
+    const modeWeights = {
+        ...DEFAULT_AI_CONFIG.modeWeights,
+        ...(parsed.modeWeights || {})
+    };
+
+    return {
+        ...DEFAULT_AI_CONFIG,
+        ...parsed,
+        temperature: clamp(Number(parsed.temperature ?? DEFAULT_AI_CONFIG.temperature), 0, 2),
+        modeWeights: {
+            quote: clamp(Number(modeWeights.quote ?? 0), 0, 100),
+            question: clamp(Number(modeWeights.question ?? 0), 0, 100),
+            pulse: clamp(Number(modeWeights.pulse ?? 0), 0, 100)
+        },
+        candidateCount: clamp(Number(parsed.candidateCount ?? DEFAULT_AI_CONFIG.candidateCount), 1, 5)
+    };
+}
+
+function promptValue(value: string | null | undefined, fallback = ""): string {
+    return value && value.trim().length > 0 ? value : fallback;
+}
+
+function getStyleGuide(category: string): string {
+    return CATEGORY_STYLE_GUIDE[category as keyof typeof CATEGORY_STYLE_GUIDE] || CATEGORY_STYLE_GUIDE.DEFAULT;
+}
+
+function recentContentBlock(recentQuotes: RecentQuoteForScoring[]): string {
+    if (recentQuotes.length === 0) return "(Neu)";
+
+    return recentQuotes
+        .slice(0, 10)
+        .map((quote, index) => {
+            const meta = [
+                quote.category,
+                quote.format,
+                quote.tone,
+                quote.imageryWorld,
+                quote.rhetoricalDevice
+            ].filter(Boolean).join(" / ");
+
+            return `${index + 1}. ${meta ? `[${meta}] ` : ""}${quote.content}`;
+        })
+        .join("\n");
+}
+
+function substitutePrompt(input: {
+    template: string;
+    plan: InspirationPlan;
+    interests: string[];
+    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    recentQuotes: RecentQuoteForScoring[];
+}): string {
+    const archetypes = ARCHETYPES_FOR_MODE[input.plan.mode] || ["Standard"];
+
+    return input.template
+        .replace(/{{MODE}}/g, input.plan.mode)
+        .replace(/{{INTERESTS}}/g, input.interests.join(", ") || "Leben, Liebe, Erfolg")
+        .replace(/{{CATEGORY}}/g, input.plan.category)
+        .replace(/{{BANNED_AUTHORS}}/g, promptValue(input.historyData.authorsString, "Keine"))
+        .replace(/{{BANNED_CONCEPTS}}/g, promptValue(input.historyData.conceptsString, "Keine"))
+        .replace(/{{HISTORY_CODE}}/g, promptValue(input.historyData.fullCode, "(Neu)"))
+        .replace(/{{RECENT_CONTENT}}/g, recentContentBlock(input.recentQuotes))
+        .replace(/{{CATEGORY_STYLE_GUIDE}}/g, getStyleGuide(input.plan.category))
+        .replace(/{{ARCHETYPES_FOR_MODE}}/g, archetypes.join(", "))
+        .replace(/{{MODE_INSTRUCTIONS}}/g, MODE_INSTRUCTIONS[input.plan.mode] || "");
+}
+
+function composeCandidatePrompt(input: {
+    plan: InspirationPlan;
+    interests: string[];
+    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    recentQuotes: RecentQuoteForScoring[];
+    masterPrompt: string;
+}): string {
+    const basePrompt = substitutePrompt({
+        template: input.masterPrompt || DEFAULT_MASTER_PROMPT,
+        plan: input.plan,
+        interests: input.interests,
+        historyData: input.historyData,
+        recentQuotes: input.recentQuotes
+    });
+
+    return `${basePrompt}
+
+VARIETY PLAN (strictly follow this lane):
+- lane: ${input.plan.lane}
+- format: ${input.plan.format}
+- perspective: ${input.plan.perspective}
+- tone: ${input.plan.tone}
+- imageryWorld: ${input.plan.imageryWorld}
+- rhetoricalDevice: ${input.plan.rhetoricalDevice}
+- timeHorizon: ${input.plan.timeHorizon}
+- actionType: ${input.plan.actionType}
+- difficulty: ${input.plan.difficulty}
+
+ABWECHSLUNGSPFLICHT:
+- Schreibe nicht wie die letzten Einträge.
+- Wiederhole keine Bildwelt, keine Satzschablone und keine Coaching-Floskel.
+- Nutze den Plan sichtbar, aber nicht mechanisch.
+- content und explanation müssen auf Deutsch sein.
+- concepts dürfen nur Wörter enthalten, die wirklich in content oder explanation vorkommen.
+
+Output: exactly one JSON object matching the configured schema.`;
+}
+
+function seedToNumber(seed: string): number {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+}
+
+function isReasoningModel(model: string): boolean {
+    return /^(gpt-5|o\d)/.test(model);
+}
+
+function shouldUsePremiumModel(plan: InspirationPlan): boolean {
+    return seedToNumber(`${plan.seed}:premium`) % 7 === 0;
+}
+
+function selectModelForPlan(plan: InspirationPlan, aiConfig: AIConfig, index: number): string {
+    if (index === 2 && shouldUsePremiumModel(plan)) {
+        return aiConfig.premiumModel || aiConfig.model;
+    }
+
+    return aiConfig.model;
+}
+
+async function generateCandidateWithOpenAI(input: {
+    plan: InspirationPlan;
+    prompt: string;
+    aiConfig: AIConfig;
+    model: string;
+    userId: string;
+}): Promise<QuoteCandidate> {
+    if (!openai) {
+        throw new Error("OpenAI client not configured");
+    }
+
+    const completion = await openai.chat.completions.create({
+        model: input.model,
+        messages: [
+            {
+                role: "system",
+                content: "Du erzeugst präzise, originelle Tagesinspirationen als gültiges JSON. Keine Erklärungen außerhalb des JSON."
+            },
+            { role: "user", content: input.prompt }
+        ],
+        response_format: quoteCandidateResponseFormat,
+        seed: seedToNumber(input.plan.seed),
+        prompt_cache_key: PROMPT_VERSION,
+        safety_identifier: seedToNumber(input.userId).toString(16),
+        ...(isReasoningModel(input.model)
+            ? { reasoning_effort: "low" as const }
+            : { temperature: input.aiConfig.temperature })
+    }, { timeout: 45_000 });
+
+    const content = completion.choices[0]?.message.content;
+    if (!content) {
+        throw new Error("OpenAI returned an empty candidate");
+    }
+
+    return QuoteCandidateSchema.parse(JSON.parse(content));
+}
+
+function createOfflineCandidate(plan: InspirationPlan): QuoteCandidate {
+    const contentByMode = {
+        QUOTE: `Zwischen ${plan.imageryWorld} und ${plan.category}: Ein neuer Blick beginnt dort, wo die alte Antwort zu bequem wird.`,
+        QUESTION: `Welche Gewohnheit in deiner ${plan.category}-Welt verdient heute einen Blick von außen statt Applaus?`,
+        PULSE: `Teste heute eine kleine ${plan.category}-Entscheidung: weniger Reflex, mehr klare Hand.`
+    };
+
+    return {
+        content: contentByMode[plan.mode],
+        author: plan.mode === "QUOTE" ? "Einsicht" : plan.mode === "QUESTION" ? "Reflexion" : "Impuls",
+        explanation: `Dieser Eintrag nutzt die ${plan.lane}-Perspektive und verschiebt den Fokus auf eine konkrete Beobachtung. Er ist als fallback gedacht, falls die Modellgenerierung nicht verfügbar ist.`,
+        category: plan.category,
+        concepts: [],
+        format: plan.format,
+        tone: plan.tone,
+        imageryWorld: plan.imageryWorld,
+        rhetoricalDevice: plan.rhetoricalDevice
+    };
+}
+
+async function getRecentQuotes(userId: string, beforeDate: string): Promise<RecentQuoteForScoring[]> {
+    const views = await prisma.dailyView.findMany({
+        where: {
+            userId,
+            date: { lt: beforeDate }
+        },
+        orderBy: { date: "desc" },
+        take: 30,
+        include: {
+            quote: {
+                select: {
+                    content: true,
+                    category: true,
+                    format: true,
+                    tone: true,
+                    imageryWorld: true,
+                    rhetoricalDevice: true
+                }
+            }
+        }
+    });
+
+    return views.map((view) => ({
+        content: view.quote.content,
+        category: view.quote.category,
+        format: view.quote.format,
+        tone: view.quote.tone,
+        imageryWorld: view.quote.imageryWorld,
+        rhetoricalDevice: view.quote.rhetoricalDevice
+    }));
+}
+
+function recentSignalsFromQuotes(recentQuotes: RecentQuoteForScoring[]): RecentInspirationSignal[] {
+    return recentQuotes.map((quote) => ({
+        category: quote.category || undefined,
+        format: quote.format || undefined,
+        tone: quote.tone || undefined,
+        imageryWorld: quote.imageryWorld || undefined,
+        rhetoricalDevice: quote.rhetoricalDevice || undefined
+    }));
+}
+
+async function generateCandidates(input: {
+    userId: string;
+    plans: InspirationPlan[];
+    interests: string[];
+    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    recentQuotes: RecentQuoteForScoring[];
+    aiConfig: AIConfig;
+}): Promise<GeneratedCandidate[]> {
+    const attempts = await Promise.all(input.plans.map(async (plan, index) => {
+        const model = selectModelForPlan(plan, input.aiConfig, index);
+        const prompt = composeCandidatePrompt({
+            plan,
+            interests: input.interests,
+            historyData: input.historyData,
+            recentQuotes: input.recentQuotes,
+            masterPrompt: input.aiConfig.masterPrompt
+        });
+
+        try {
+            const candidate = openai
+                ? await generateCandidateWithOpenAI({
+                    plan,
+                    prompt,
+                    aiConfig: input.aiConfig,
+                    model,
+                    userId: input.userId
+                })
+                : createOfflineCandidate(plan);
+            const normalizedCandidate = {
+                ...candidate,
+                category: plan.category,
+                format: candidate.format || plan.format,
+                tone: candidate.tone || plan.tone,
+                imageryWorld: candidate.imageryWorld || plan.imageryWorld,
+                rhetoricalDevice: candidate.rhetoricalDevice || plan.rhetoricalDevice
+            };
+            const score = scoreQuoteCandidate({
+                candidate: normalizedCandidate,
+                plan,
+                recentQuotes: input.recentQuotes
+            });
+
+            return {
+                candidate: normalizedCandidate,
+                plan,
+                score,
+                sourceModel: openai ? model : "offline-variety"
+            };
+        } catch (error) {
+            logger.warn("[QuoteService] Candidate generation failed", {
+                lane: plan.lane,
+                model,
+                error: error instanceof Error ? error.message : "unknown"
+            });
+
+            if (model !== input.aiConfig.fallbackModel && openai) {
+                try {
+                    const candidate = await generateCandidateWithOpenAI({
+                        plan,
+                        prompt,
+                        aiConfig: input.aiConfig,
+                        model: input.aiConfig.fallbackModel,
+                        userId: input.userId
+                    });
+                    const score = scoreQuoteCandidate({ candidate, plan, recentQuotes: input.recentQuotes });
+                    return {
+                        candidate,
+                        plan,
+                        score,
+                        sourceModel: input.aiConfig.fallbackModel
+                    };
+                } catch {
+                    return null;
+                }
+            }
+
+            return null;
+        }
+    }));
+
+    return attempts.filter((candidate): candidate is GeneratedCandidate => candidate !== null);
+}
+
+function chooseWinner(candidates: GeneratedCandidate[]): GeneratedCandidate {
+    const winner = candidates
+        .slice()
+        .sort((a, b) => b.score.score - a.score.score)[0];
+
+    if (!winner) {
+        throw new Error("No quote candidates could be generated");
+    }
+
+    return winner;
+}
+
+async function buildGenerationContext(userId: string, date: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const prefs = safeJsonParse<UserPreferences>(user?.preferences, {});
+    const interests = Array.isArray(prefs.interests) ? prefs.interests : [];
+    const aiConfig = resolveAiConfig(user?.aiConfig || null);
+    const recentQuotes = await getRecentQuotes(userId, date);
+    const historyData = await HistoryCompressor.calculateUserHistoryCode(userId, interests);
+    const basePlan = buildInspirationPlan({
+        userId,
+        date,
+        interests,
+        modeWeights: aiConfig.modeWeights,
+        recentSignals: recentSignalsFromQuotes(recentQuotes)
+    });
+    const plans = buildCandidatePlans(basePlan, aiConfig.candidateCount);
+
+    return {
+        user,
+        prefs,
+        interests,
+        aiConfig,
+        recentQuotes,
+        historyData,
+        basePlan,
+        plans
+    };
+}
+
+export async function buildDailyPromptPreview(userId: string, forcedDate?: string) {
+    const date = forcedDate || formatAppDate();
+    const context = await buildGenerationContext(userId, date);
+    const plan = context.plans[0] || context.basePlan;
+
+    if (!context.user) {
+        throw new Error("User not found");
+    }
+
+    return {
+        date,
+        plan,
+        prompt: composeCandidatePrompt({
+            plan,
+            interests: context.interests,
+            historyData: context.historyData,
+            recentQuotes: context.recentQuotes,
+            masterPrompt: context.aiConfig.masterPrompt
+        })
+    };
+}
+
+export async function getDailyQuote(userId: string, forcedDate?: string) {
+    const today = forcedDate || formatAppDate();
+
     const history = await prisma.dailyView.findUnique({
         where: {
             userId_date: {
                 userId,
-                date: today,
-            },
+                date: today
+            }
         },
         include: {
-            quote: true,
-        },
+            quote: true
+        }
     });
 
     if (history) {
-        console.log(`[QuoteService] History found for user ${userId}. Returning cached quote.`);
         const rating = await prisma.rating.findFirst({ where: { userId, quoteId: history.quoteId } });
         return {
             ...history.quote,
@@ -155,186 +563,88 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
         };
     }
 
-    // 2. Generate or Fetch new quote
-    let quoteData: any;
-    let usedModel = "offline";
-    console.log(`[QuoteService] Generating for User: ${userId}`);
+    logger.info(`[QuoteService] Generating daily inspiration for user ${userId} on ${today}`);
 
-    if (openai) {
-        console.log("[QuoteService] OpenAI Client Active. Attempting generation...");
-        try {
-            // Get User Preferences & Admin Config
-            const user = await prisma.user.findUnique({ where: { id: userId } });
-            console.log("DEBUG: User found:", !!user);
-            console.log("DEBUG: User Prefs Raw:", user?.preferences);
-            const prefs = user?.preferences ? (JSON.parse(user.preferences) || {}) : {};
-            console.log("DEBUG: Parsed Prefs:", prefs);
-            let aiConfig = {
-                temperature: 1.0,
-                modeWeights: { quote: 50, question: 30, pulse: 20 },
-                masterPrompt: "",
-                model: "gpt-5.4" // Default to High-End Model (Future Proof)
-            };
-
-            if (user?.aiConfig) {
-                try {
-                    const parsed = JSON.parse(user.aiConfig);
-                    aiConfig = { ...aiConfig, ...parsed };
-                    console.log(`[QuoteService] Using Admin Config for user ${userId}`, aiConfig);
-                } catch (e) { console.error("Invalid AI Config", e); }
-            }
-
-            // Weighted Random Mode Selection
-            const modes = [];
-            for (let i = 0; i < aiConfig.modeWeights.quote; i++) modes.push("QUOTE");
-            for (let i = 0; i < aiConfig.modeWeights.question; i++) modes.push("QUESTION");
-            for (let i = 0; i < aiConfig.modeWeights.pulse; i++) modes.push("PULSE");
-            // Fallback if weights are 0
-            if (modes.length === 0) modes.push("QUOTE");
-
-            const mode = modes[Math.floor(Math.random() * modes.length)];
-
-            // Fetch compressed history (Forbidden Tokens)
-            // PROTECT user interests from being banned
-            console.log("DEBUG: Accessing prefs.interests for protectedTerms");
-            const protectedTerms = Array.isArray(prefs?.interests) ? prefs.interests : [];
-            const historyData = await HistoryCompressor.calculateUserHistoryCode(userId, protectedTerms);
-
-            console.log(`[QuoteService] History Code: ${historyData.fullCode.substring(0, 50)}...`);
-
-            // --- Advanced Prompt Logic ---
-
-            // 1. Determine Category
-            // Pick a random interest from user prefs, or default to general categories if empty
-            console.log("DEBUG: Determining Category");
-            // STRICT: Only use user interests if they exist.
-            const interestPool = (Array.isArray(prefs?.interests) && prefs.interests.length > 0)
-                ? prefs.interests
-                : ["Achtsamkeit", "Spiritualität", "Mut", "Erfolg", "Liebe"]; // Fallback only if NO interests selected
-
-            const targetCategory = interestPool[Math.floor(Math.random() * interestPool.length)];
-
-            const styleGuide = CATEGORY_STYLE_GUIDE[targetCategory as keyof typeof CATEGORY_STYLE_GUIDE] || CATEGORY_STYLE_GUIDE["DEFAULT"];
-
-            const archetypes = ARCHETYPES_FOR_MODE[mode as keyof typeof ARCHETYPES_FOR_MODE] || ["Standard"];
-            const archetypeListStr = archetypes.join(", ");
-
-            let masterPrompt = aiConfig.masterPrompt || DEFAULT_MASTER_PROMPT;
-
-            // Variable Substitution
-            masterPrompt = masterPrompt.replace(/{{MODE}}/g, mode);
-            masterPrompt = masterPrompt.replace(/{{INTERESTS}}/g, prefs.interests?.join(", ") || "Leben, Liebe, Erfolg");
-            masterPrompt = masterPrompt.replace(/{{CATEGORY}}/g, targetCategory);
-            masterPrompt = masterPrompt.replace(/{{BANNED_AUTHORS}}/g, historyData.authorsString || "Keine");
-            masterPrompt = masterPrompt.replace(/{{BANNED_CONCEPTS}}/g, historyData.conceptsString || "Keine");
-            masterPrompt = masterPrompt.replace(/{{HISTORY_CODE}}/g, historyData.fullCode || "(Neu)");
-
-            masterPrompt = masterPrompt.replace(/{{CATEGORY_STYLE_GUIDE}}/g, styleGuide);
-            masterPrompt = masterPrompt.replace(/{{ARCHETYPES_FOR_MODE}}/g, archetypeListStr);
-            masterPrompt = masterPrompt.replace(/{{MODE_INSTRUCTIONS}}/g, MODE_INSTRUCTIONS[mode as keyof typeof MODE_INSTRUCTIONS] || "");
-
-            console.log("[QuoteService] Final Prompt sent to OpenAI (User defined OR System default):", masterPrompt);
-
-            // Use the configured model (e.g., gpt-5, gpt-5-mini, gpt-4o)
-            console.log(`[QuoteService] Using Model: ${aiConfig.model}`);
-
-            // 1. Force Temperature=1 for GPT-5 (Strict API Requirement)
-            if (aiConfig.model.includes("gpt-5") || aiConfig.model.includes("o1") || aiConfig.model.includes("o3")) {
-                console.log("[QuoteService] Enforcing Temperature=1.0 for High-Reasoning Model");
-                aiConfig.temperature = 1.0;
-            }
-            usedModel = aiConfig.model;
-
-            const completion = await openai.chat.completions.create({
-                model: aiConfig.model,
-                messages: [
-                    { role: "system", content: "Du bist ein intellektueller Mentor." },
-                    { role: "user", content: masterPrompt }
-                ],
-                response_format: { type: "json_object" },
-                temperature: aiConfig.temperature
-            });
-
-            const content = completion.choices[0].message.content;
-            if (content) {
-                quoteData = JSON.parse(content);
-            }
-        } catch (error) {
-            console.error("OpenAI Error:", error);
-            // Fallback to mock logic will trigger if quoteData is still null
-        }
-    }
-
-    // Criticial Error if Generation Failed
-    if (!quoteData) {
-        throw new Error("No OpenAI Client Configured or Generation failed");
-    } else {
-        console.log("[QuoteService] OpenAI Success. Content:", quoteData.content.substring(0, 20) + "...");
-    }
-
-    // 3. Save to DB
-    // Handle concepts safely (might be array from AI or string from Mock)
-    let conceptsStr = null;
-    if (quoteData.concepts) {
-        conceptsStr = typeof quoteData.concepts === 'string'
-            ? quoteData.concepts
-            : JSON.stringify(quoteData.concepts);
-    }
+    const context = await buildGenerationContext(userId, today);
+    const candidates = await generateCandidates({
+        userId,
+        plans: context.plans,
+        interests: context.interests,
+        historyData: context.historyData,
+        recentQuotes: context.recentQuotes,
+        aiConfig: context.aiConfig
+    });
+    const winner = chooseWinner(candidates);
+    const generationTrace = JSON.stringify({
+        promptVersion: PROMPT_VERSION,
+        selectedLane: winner.plan.lane,
+        selectedScore: winner.score,
+        candidates: candidates.map((candidate) => ({
+            lane: candidate.plan.lane,
+            model: candidate.sourceModel,
+            score: candidate.score.score,
+            reasons: candidate.score.reasons
+        }))
+    });
+    const conceptsStr = JSON.stringify(winner.candidate.concepts || []);
 
     const quote = await prisma.quote.create({
         data: {
-            content: quoteData.content,
-            author: quoteData.author,
-            explanation: quoteData.explanation,
-            category: quoteData.category,
+            content: winner.candidate.content,
+            author: winner.candidate.author,
+            explanation: winner.candidate.explanation,
+            category: winner.candidate.category,
             concepts: conceptsStr,
-            sourceModel: usedModel
+            sourceModel: winner.sourceModel,
+            mode: winner.plan.mode,
+            format: winner.candidate.format,
+            perspective: winner.plan.perspective,
+            tone: winner.candidate.tone,
+            imageryWorld: winner.candidate.imageryWorld,
+            rhetoricalDevice: winner.candidate.rhetoricalDevice,
+            timeHorizon: winner.plan.timeHorizon,
+            actionType: winner.plan.actionType,
+            difficulty: winner.plan.difficulty,
+            promptVersion: PROMPT_VERSION,
+            provider: openai ? "openai" : "offline",
+            noveltyScore: winner.score.score,
+            generationTrace
         }
     });
 
-    // 4. Record View (if new)
-    // 4. Record View (if new)
-    if (!history) {
-        try {
-            await prisma.dailyView.create({
-                data: {
-                    userId,
-                    quoteId: quote.id,
-                    date: today
-                }
-            });
-        } catch (error: any) {
-            // Race Condition Handling:
-            // If we hit P2002 (Unique Constraint), it means another request created the view 
-            // WHILE we were generating. We should discard our just-generated quote (orphaned)
-            // and return the one from the winning request to stay consistent.
-            if (error.code === 'P2002') {
-                console.warn(`[QuoteService] Race condition detected for user ${userId} on ${today}. Fetching winner.`);
-                const winner = await prisma.dailyView.findUnique({
-                    where: {
-                        userId_date: { userId, date: today }
-                    },
-                    include: { quote: true }
-                });
-
-                if (winner) {
-                    return {
-                        ...winner.quote,
-                        isNew: false, // It's technically not "new" anymore as the user has "seen" it in the other request context
-                        isLiked: false // Likelihood of liking in <1s is 0
-                    };
-                }
+    try {
+        await prisma.dailyView.create({
+            data: {
+                userId,
+                quoteId: quote.id,
+                date: today
             }
-            // If it's another error, or we somehow can't find the winner, re-throw or return current
-            console.error("[QuoteService] Error creating dailyView:", error);
-            // We return the current quote anyway, worst case the view isn't recorded but the user sees content.
+        });
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            await prisma.quote.delete({ where: { id: quote.id } }).catch(() => undefined);
+            const winnerView = await prisma.dailyView.findUnique({
+                where: {
+                    userId_date: { userId, date: today }
+                },
+                include: { quote: true }
+            });
+
+            if (winnerView) {
+                return {
+                    ...winnerView.quote,
+                    isNew: false,
+                    isLiked: false
+                };
+            }
         }
+
+        logger.error("[QuoteService] Error creating dailyView:", error);
     }
 
-    // Check if liked
     const rating = await prisma.rating.findFirst({
         where: { userId, quoteId: quote.id }
     });
 
-    return { ...quote, isNew: !history, isLiked: !!rating };
+    return { ...quote, isNew: true, isLiked: !!rating };
 }

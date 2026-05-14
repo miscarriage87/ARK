@@ -17,7 +17,7 @@ export default function Onboarding({ initialName }: OnboardingProps) {
     // Use initialName if provided
     const [name, setName] = useState(initialName || "");
     const [loading, setLoading] = useState(false);
-    const [fakeProgress, setFakeProgress] = useState(0);
+    const [, setFakeProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false); // Prevent double-submit
 

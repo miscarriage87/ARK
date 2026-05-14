@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import Onboarding from "@/components/Onboarding";
-import IntroSequence from "@/components/ui/IntroSequence";
 import { Metadata } from "next";
 import QuoteView from "@/components/QuoteView";
 import { notFound } from "next/navigation";
+import { safeJsonParse } from "@/lib/utils";
 
 type Props = {
     params: Promise<{ username: string }>;
@@ -55,13 +55,8 @@ export default async function UserPage({ params }: Props) {
 
     // 3. User exists -> Prepare Data for Suspended View
     // We need to parse 'interests' from the JSON preferences because QuoteView expects a strict array.
-    let interests: string[] = [];
-    if (user.preferences && typeof user.preferences === 'object' && !Array.isArray(user.preferences)) {
-        const prefs = user.preferences as any;
-        if (Array.isArray(prefs.interests)) {
-            interests = prefs.interests as string[];
-        }
-    }
+    const prefs = safeJsonParse<{ interests?: string[] }>(user.preferences, {});
+    const interests = Array.isArray(prefs.interests) ? prefs.interests : [];
 
     const cleanUser = {
         ...user,

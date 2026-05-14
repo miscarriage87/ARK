@@ -3,9 +3,45 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Lock, Unlock, ArrowLeft, Sparkles, Database } from "lucide-react";
 import { INTERESTS, MAX_INTERESTS } from "@/lib/constants";
+import { safeJsonParse } from "@/lib/utils";
+
+type AdminConcept = {
+    word?: string;
+};
+
+type AdminQuote = {
+    id: number;
+    content: string;
+    author: string | null;
+    explanation: string | null;
+    category: string | null;
+    sourceModel: string | null;
+    concepts: string | null;
+    format: string | null;
+    tone: string | null;
+    imageryWorld: string | null;
+    noveltyScore: number | null;
+};
+
+type AdminView = {
+    id: number;
+    date: string;
+    quote: AdminQuote;
+};
+
+type AdminUser = {
+    id: string;
+    name: string;
+    preferences: string | null;
+    views: AdminView[];
+};
+
+type UserPreferences = {
+    interests?: string[];
+};
 
 export default function UserAdminPage({ params }: { params: Promise<{ id: string }> }) {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<AdminUser | null>(null);
     const [interests, setInterests] = useState<string[]>([]);
 
     // UI State
@@ -26,15 +62,12 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
     const fetchData = async (id: string) => {
         try {
             const res = await fetch(`/api/admin/user/${id}`);
-            const data = await res.json();
+            const data = await res.json() as AdminUser;
             setUser(data);
 
             if (data.preferences) {
-                try {
-                    setInterests(JSON.parse(data.preferences).interests || []);
-                } catch (e) {
-                    console.error("Failed to parse preferences", e);
-                }
+                const prefs = safeJsonParse<UserPreferences>(data.preferences, {});
+                setInterests(Array.isArray(prefs.interests) ? prefs.interests : []);
             }
         } catch (e) {
             console.error("Failed to fetch user data", e);
@@ -45,10 +78,11 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
 
     const handleSave = async () => {
         if (isSafe) return;
+        if (!user) return;
         setSaving(true);
         try {
             // Construct preferences object (preserve existing fields if any, though interests is main one)
-            const currentPrefs = user.preferences ? JSON.parse(user.preferences) : {};
+            const currentPrefs = safeJsonParse<UserPreferences>(user.preferences, {});
             const updatedPreferences = {
                 ...currentPrefs,
                 interests: interests
@@ -68,7 +102,7 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
 
             // Refresh local data
             fetchData(userId);
-        } catch (e) {
+        } catch {
             alert("Error saving data");
         }
         setSaving(false);
@@ -174,7 +208,7 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {user?.views?.map((view: any) => (
+                                {user?.views?.map((view) => (
                                     <tr key={view.id} className="hover:bg-white/5 transition-colors group">
                                         <td className="p-4 font-mono text-xs whitespace-nowrap align-top text-gray-500">{view.date}</td>
                                         <td className="p-4 align-top w-40">
@@ -185,6 +219,21 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                                 <span className="text-[11px] font-mono text-gray-500 bg-black/30 px-2 py-0.5 rounded w-fit border border-white/5">
                                                     {view.quote.sourceModel}
                                                 </span>
+                                                {view.quote.format && (
+                                                    <span className="text-[11px] text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded w-fit">
+                                                        {view.quote.format}
+                                                    </span>
+                                                )}
+                                                {view.quote.tone && (
+                                                    <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded w-fit">
+                                                        {view.quote.tone}
+                                                    </span>
+                                                )}
+                                                {view.quote.noveltyScore !== null && (
+                                                    <span className="text-[11px] font-mono text-green-300 bg-green-500/10 px-2 py-0.5 rounded w-fit">
+                                                        novelty {view.quote.noveltyScore.toFixed(2)}
+                                                    </span>
+                                                )}
                                                 {view.quote.author && (
                                                     <span className="text-[11px] text-gray-400 italic mt-1">
                                                         {view.quote.author}
@@ -194,7 +243,7 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                         </td>
                                         <td className="p-4 text-white align-top max-w-lg">
                                             <div className="serif text-base leading-relaxed text-gray-200 mb-2">
-                                                "{view.quote.content}"
+                                                &ldquo;{view.quote.content}&rdquo;
                                             </div>
                                             {view.quote.explanation && (
                                                 <div className="text-[11px] text-gray-500 pl-2 border-l-2 border-white/10">
@@ -207,11 +256,11 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                                 <div className="flex flex-col gap-1">
                                                     {(() => {
                                                         try {
-                                                            const c = JSON.parse(view.quote.concepts);
-                                                            return Array.isArray(c) ? c.map((i: any, idx: number) => (
+                                                            const c: unknown = JSON.parse(view.quote.concepts);
+                                                            return Array.isArray(c) ? c.map((i: AdminConcept, idx: number) => (
                                                                 <span key={idx} className="block text-purple-400/80">• {i.word}</span>
                                                             )) : <span className="text-red-500">Invalid JSON</span>;
-                                                        } catch (e) { return <span className="text-gray-600">{view.quote.concepts}</span>; }
+                                                        } catch { return <span className="text-gray-600">{view.quote.concepts}</span>; }
                                                     })()}
                                                 </div>
                                             ) : <span className="opacity-20">-</span>}

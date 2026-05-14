@@ -24,7 +24,7 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
 
     useEffect(() => {
         // Detect iOS
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window);
         setIos(isIOS);
 
         // Parse existing prefs
@@ -60,7 +60,7 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
             // Removed alert("Gespeichert!") as requested/suggested for smoother UX
             router.refresh();
             onClose();
-        } catch (e) {
+        } catch {
             alert("Fehler beim Speichern");
         } finally {
             setLoading(false);
@@ -139,11 +139,11 @@ export default function SettingsOverlay({ isOpen, onClose, user }: SettingsOverl
                                         <Share size={20} className="text-blue-500" />
                                         <span>Teilen</span>
                                     </div>
-                                    <div className="mt-2">2. Wähle <strong>"Zum Home-Bildschirm"</strong>.</div>
+                                    <div className="mt-2">2. Wähle <strong>&quot;Zum Home-Bildschirm&quot;</strong>.</div>
                                 </div>
                             ) : (
                                 <div className={styles.installGuide}>
-                                    Für die beste Erfahrung: Füge diese Seite zu deinen Lesezeichen hinzu oder nutze "Zum Startbildschirm hinzufügen" im Browsermenü.
+                                    Für die beste Erfahrung: Füge diese Seite zu deinen Lesezeichen hinzu oder nutze &quot;Zum Startbildschirm hinzufügen&quot; im Browsermenü.
                                 </div>
                             )}
                         </div>

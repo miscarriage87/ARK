@@ -30,6 +30,19 @@ model Quote {
   category    String?  // The "Tag" or "Topic"
   tags        String?  // Comma separated
   concepts    String?  // JSON string of { word: definition }
+  mode        String?
+  format      String?
+  perspective String?
+  tone        String?
+  imageryWorld String?
+  rhetoricalDevice String?
+  timeHorizon String?
+  actionType  String?
+  difficulty  String?
+  promptVersion String?
+  provider    String?
+  noveltyScore Float?
+  generationTrace String?
   
   generatedAt DateTime @default(now())
   sourceModel String? // "gpt-4o", "mock"
@@ -39,6 +52,9 @@ model Quote {
   shares      Share[]
 
   @@index([category])
+  @@index([mode])
+  @@index([format])
+  @@index([tone])
 }
 
 model DailyView {

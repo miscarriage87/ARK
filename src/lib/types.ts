@@ -19,6 +19,9 @@ export interface AIConfig {
     };
     masterPrompt?: string;
     model?: string;
+    premiumModel?: string;
+    fallbackModel?: string;
+    candidateCount?: number;
 }
 
 // Quote-Daten aus der Datenbank
@@ -30,6 +33,19 @@ export interface Quote {
     category: string | null;
     tags: string | null;
     concepts: string | null;
+    mode: string | null;
+    format: string | null;
+    perspective: string | null;
+    tone: string | null;
+    imageryWorld: string | null;
+    rhetoricalDevice: string | null;
+    timeHorizon: string | null;
+    actionType: string | null;
+    difficulty: string | null;
+    promptVersion: string | null;
+    provider: string | null;
+    noveltyScore: number | null;
+    generationTrace: string | null;
     generatedAt: Date;
     sourceModel: string | null;
 }

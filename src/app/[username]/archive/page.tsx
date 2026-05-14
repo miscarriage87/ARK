@@ -101,7 +101,7 @@ export default async function ArchivePage({ params, searchParams }: { params: Pr
                             border: '1px solid rgba(255,255,255,0.1)'
                         }}>
                             <div style={{ fontSize: '1.1rem', marginBottom: '1rem', lineHeight: '1.5' }}>
-                                "{quote.content}"
+                                &ldquo;{quote.content}&rdquo;
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', opacity: 0.6 }}>
                                 <span>{quote.author !== 'Reflexion' && quote.author !== 'Impuls' ? quote.author : ''}</span>

@@ -36,6 +36,29 @@ export function formatDateString(date: Date = new Date()): string {
 }
 
 /**
+ * Formats a date in the app's product timezone instead of UTC.
+ * This keeps the daily calendar aligned with the user's expected local day.
+ */
+export function formatAppDate(date: Date = new Date()): string {
+    const timeZone = process.env.APP_TIME_ZONE || "Europe/Berlin";
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(date);
+
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${byType.year}-${byType.month}-${byType.day}`;
+}
+
+export function addDays(date: Date, days: number): Date {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+}
+
+/**
  * Logger mit Environment-Check
  * Unterdrückt Debug-Logs in Production
  */

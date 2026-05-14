@@ -14,7 +14,10 @@ const aiConfigSchema = z.object({
         pulse: z.number().min(0).max(100)
     }).optional(),
     masterPrompt: z.string().max(10000).optional(),
-    model: z.string().max(50).optional()
+    model: z.string().max(50).optional(),
+    premiumModel: z.string().max(50).optional(),
+    fallbackModel: z.string().max(50).optional(),
+    candidateCount: z.number().int().min(1).max(5).optional()
 }).optional();
 
 const preferencesSchema = z.object({

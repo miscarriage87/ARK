@@ -1,29 +1,65 @@
 "use client";
-import { motion, useMotionValue, useTransform } from "framer-motion";
-import { useState } from "react";
+import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { useState, type ReactNode } from "react";
 import { Quote, Share2, Heart } from "lucide-react";
 import styles from "./CalendarLeaf.module.css";
 import ConceptOverlay from "./ConceptOverlay";
 
-export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, dateStr: string, userId?: string }) {
+type Concept = {
+    word: string;
+    definition: string;
+};
+
+type CalendarQuote = {
+    id: number;
+    content: string;
+    author: string | null;
+    explanation: string | null;
+    concepts: string | null;
+    isLiked?: boolean;
+};
+
+function parseConcepts(conceptsJson: string | null): Concept[] {
+    if (!conceptsJson) return [];
+
+    try {
+        const parsed: unknown = JSON.parse(conceptsJson);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.filter((item): item is Concept => {
+            return typeof item === "object"
+                && item !== null
+                && "word" in item
+                && "definition" in item
+                && typeof item.word === "string"
+                && typeof item.definition === "string";
+        });
+    } catch (error) {
+        console.error("Interaction Error", error);
+        return [];
+    }
+}
+
+export default function CalendarLeaf({ quote, dateStr, userId }: { quote: CalendarQuote, dateStr: string, userId?: string }) {
     const [revealed, setRevealed] = useState(false);
-    const [activeConcept, setActiveConcept] = useState<{ word: string, definition: string } | null>(null);
+    const [activeConcept, setActiveConcept] = useState<Concept | null>(null);
     const [liked, setLiked] = useState(quote.isLiked || false);
 
     const y = useMotionValue(0);
     const rotate = useTransform(y, [0, 300], [0, 15]);
     const opacity = useTransform(y, [0, 200], [1, 0]);
 
-    const handleDragEnd = (_: any, info: any) => {
+    const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (info.offset.y > 100) {
             setRevealed(true);
             if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
         }
     };
 
-    const day = new Date(dateStr).getDate();
-    const month = new Date(dateStr).toLocaleDateString("de-DE", { month: "long" });
-    const weekday = new Date(dateStr).toLocaleDateString("de-DE", { weekday: "long" });
+    const displayDate = new Date(`${dateStr}T00:00:00`);
+    const day = displayDate.getDate();
+    const month = displayDate.toLocaleDateString("de-DE", { month: "long" });
+    const weekday = displayDate.toLocaleDateString("de-DE", { weekday: "long" });
 
     const handleRate = async () => {
         if (liked) return; // Prevent double click
@@ -32,7 +68,10 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
             if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
             await fetch("/api/quote/rate", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(userId ? { "x-user-id": userId } : {})
+                },
                 body: JSON.stringify({ quoteId: quote.id, score: 5 }),
             });
             // alert("Danke! Das Zitat wurde gespeichert."); // Removed alert for smoother UX
@@ -43,12 +82,13 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
     };
 
     const handleShare = async () => {
-        const shareData = {
+        const shareText = `"${quote.content}" — ${quote.author}`;
+        const shareData: ShareData = {
             title: 'ARK',
-            text: `"${quote.content}" — ${quote.author}`,
+            text: shareText,
         };
 
-        if (navigator.share && navigator.canShare?.(shareData as any)) {
+        if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
             try {
                 await navigator.share(shareData);
             } catch (err) {
@@ -59,7 +99,7 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
         } else {
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(shareData.text);
+                    await navigator.clipboard.writeText(shareText);
                     alert("Zitat kopiert!");
                 } else {
                     throw new Error("Clipboard API not available");
@@ -72,72 +112,67 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
     };
 
     // Robust Interactive Text Rendering
-    const renderInteractiveText = (text: string, conceptsJson: string | null) => {
+    const renderInteractiveText = (text: string, conceptsJson: string | null): ReactNode => {
         if (!conceptsJson || !text) return text;
 
-        try {
-            const concepts = JSON.parse(conceptsJson);
-            if (!Array.isArray(concepts) || concepts.length === 0) return text;
+        const concepts = parseConcepts(conceptsJson);
+        if (concepts.length === 0) return text;
 
-            // Sort by length desc (longest match first)
-            concepts.sort((a: any, b: any) => b.word.length - a.word.length);
+        // Sort by length desc (longest match first)
+        concepts.sort((a, b) => b.word.length - a.word.length);
 
-            // Escape regex chars
-            const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Escape regex chars
+        const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            // Build regex with word boundaries to avoid partial matches inside words
-            // Flag 'i' for case insensitive
-            const pattern = new RegExp(`\\b(${concepts.map((c: any) => escapeRegExp(c.word)).join('|')})\\b`, 'gi');
+        const escapedWords = concepts.map((concept) => escapeRegExp(concept.word));
+        if (escapedWords.length === 0) return text;
 
-            const matches = text.match(pattern);
-            if (!matches) return text;
+        // Build regex with word boundaries to avoid partial matches inside words.
+        const iterPattern = new RegExp(`\\b(${escapedWords.join('|')})\\b`, 'gi');
 
-            const result = [];
-            let lastIndex = 0;
-            let match;
-            const iterPattern = new RegExp(`\\b(${concepts.map((c: any) => escapeRegExp(c.word)).join('|')})\\b`, 'gi');
+        if (!text.match(iterPattern)) return text;
+        iterPattern.lastIndex = 0;
 
-            while ((match = iterPattern.exec(text)) !== null) {
-                if (match.index > lastIndex) {
-                    result.push(text.substring(lastIndex, match.index));
-                }
+        const result: ReactNode[] = [];
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
 
-                const matchedWord = match[0];
-                const concept = concepts.find((c: any) => c.word.toLowerCase() === matchedWord.toLowerCase());
-
-                if (concept) {
-                    result.push(
-                        <span
-                            key={match.index}
-                            onClick={(e) => { e.stopPropagation(); setActiveConcept(concept); }}
-                            style={{
-                                textDecoration: 'underline',
-                                textDecorationStyle: 'dashed',
-                                textDecorationColor: 'hsl(var(--primary))',
-                                cursor: 'pointer',
-                                textUnderlineOffset: '4px'
-                            }}
-                        >
-                            {matchedWord}
-                        </span>
-                    );
-                } else {
-                    result.push(matchedWord);
-                }
-
-                lastIndex = iterPattern.lastIndex;
+        while ((match = iterPattern.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                result.push(text.substring(lastIndex, match.index));
             }
 
-            if (lastIndex < text.length) {
-                result.push(text.substring(lastIndex));
+            const matchedWord = match[0];
+            const concept = concepts.find((item) => item.word.toLowerCase() === matchedWord.toLowerCase());
+
+            if (concept) {
+                result.push(
+                    <span
+                        key={match.index}
+                        onClick={(e) => { e.stopPropagation(); setActiveConcept(concept); }}
+                        style={{
+                            textDecoration: 'underline',
+                            textDecorationStyle: 'dashed',
+                            textDecorationColor: 'hsl(var(--primary))',
+                            cursor: 'pointer',
+                            textUnderlineOffset: '4px'
+                        }}
+                    >
+                        {matchedWord}
+                    </span>
+                );
+            } else {
+                result.push(matchedWord);
             }
 
-            return result;
-
-        } catch (e) {
-            console.error("Interaction Error", e);
-            return text;
+            lastIndex = iterPattern.lastIndex;
         }
+
+        if (lastIndex < text.length) {
+            result.push(text.substring(lastIndex));
+        }
+
+        return result;
     };
 
     return (
@@ -154,7 +189,7 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: any, d
                     <Quote className={styles.icon} />
 
                     <h2 className={styles.quoteText}>
-                        "{renderInteractiveText(quote.content, quote.concepts)}"
+                        &ldquo;{renderInteractiveText(quote.content, quote.concepts)}&rdquo;
                     </h2>
 
                     {quote.author && quote.author !== "Unbekannt" && quote.author !== "Unknown" && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
+import { addDays, formatAppDate } from "@/lib/utils";
 
 /**
  * GET /api/cron/pregenerate
@@ -41,6 +42,13 @@ export async function GET(req: NextRequest) {
     const apiKey = req.headers.get("x-cron-key") || req.nextUrl.searchParams.get("key");
     const expectedKey = process.env.CRON_API_KEY;
 
+    if (process.env.NODE_ENV === "production" && !expectedKey) {
+        return NextResponse.json(
+            { error: "CRON_API_KEY is required in production" },
+            { status: 500 }
+        );
+    }
+
     if (expectedKey && apiKey !== expectedKey) {
         return NextResponse.json(
             { error: "Unauthorized" },
@@ -49,10 +57,8 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        // Berechne morgen
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        // Berechne morgen in der App-Zeitzone
+        const tomorrowStr = formatAppDate(addDays(new Date(), 1));
 
         console.log(`[Cron] Starte Vorgenerierung für ${tomorrowStr}`);
 

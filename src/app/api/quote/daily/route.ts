@@ -2,22 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDailyQuote } from "@/lib/ai-service";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { z } from "zod";
+import { INTERESTS, MAX_INTERESTS } from "@/lib/constants";
+import { isValidUUID } from "@/lib/utils";
+
+const onboardingSchema = z.object({
+    name: z.string().trim().min(1).max(80),
+    interests: z.array(z.enum(INTERESTS)).max(MAX_INTERESTS)
+});
 
 export async function GET(req: NextRequest) {
     console.log("[API] GET /api/quote/daily called");
-    let userId = req.headers.get("x-user-id");
+    const userId = req.headers.get("x-user-id");
 
-    if (!userId) {
+    if (!userId || !isValidUUID(userId)) {
         return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
 
     try {
         // Ensure user exists
-        let user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             // Check if there is a name-based user match for this ID? No, ID is primary.
             // Just create visitor.
-            user = await prisma.user.create({
+            await prisma.user.create({
                 data: {
                     id: userId,
                     name: "Visitor"
@@ -36,14 +44,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { name, interests } = body;
+        const parsed = onboardingSchema.safeParse(body);
 
-        if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
+        if (!parsed.success) {
+            return NextResponse.json({
+                error: "Invalid onboarding data",
+                details: parsed.error.flatten()
+            }, { status: 400 });
+        }
+
+        const { name, interests } = parsed.data;
+        const preferences = JSON.stringify({ name, interests });
 
         console.log(`[API] Onboarding/Login for name: ${name}`);
 
         // 1. Check if user exists by Name
-        let user = await prisma.user.findUnique({ where: { name } });
+        const user = await prisma.user.findUnique({ where: { name } });
         let userId = user?.id;
 
         const cookieStore = await cookies();
@@ -54,7 +70,7 @@ export async function POST(req: NextRequest) {
             await prisma.user.update({
                 where: { id: user.id },
                 data: {
-                    preferences: JSON.stringify(body),
+                    preferences,
                     onboardingCompleted: true
                 }
             });
@@ -75,7 +91,7 @@ export async function POST(req: NextRequest) {
                     where: { id: userId },
                     data: {
                         name,
-                        preferences: JSON.stringify(body),
+                        preferences,
                         onboardingCompleted: true
                     }
                 });
@@ -85,7 +101,7 @@ export async function POST(req: NextRequest) {
                 const newUser = await prisma.user.create({
                     data: {
                         name,
-                        preferences: JSON.stringify(body),
+                        preferences,
                         onboardingCompleted: true
                     }
                 });

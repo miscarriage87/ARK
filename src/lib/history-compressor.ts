@@ -1,6 +1,10 @@
 
 import { prisma } from "./prisma";
 
+type ConceptEntry = {
+    word?: string;
+};
+
 export class HistoryCompressor {
     /**
      * Generates a compressed "Blocklist" string for the AI.
@@ -52,7 +56,7 @@ export class HistoryCompressor {
                 try {
                     const parsed = JSON.parse(q.concepts);
                     if (Array.isArray(parsed)) {
-                        parsed.forEach((c: any) => {
+                        parsed.forEach((c: ConceptEntry) => {
                             if (c.word) {
                                 const word = c.word.trim();
                                 conceptCounts[word] = (conceptCounts[word] || 0) + 1;
@@ -64,7 +68,7 @@ export class HistoryCompressor {
                             }
                         });
                     }
-                } catch (e) {
+                } catch {
                     // Ignore bad JSON
                 }
             }

@@ -36,7 +36,7 @@ npx tsx scripts/backfill-date.ts         # Generate a single quote for specific 
 ### Tech Stack
 - **Next.js 16** (App Router) with TypeScript + React 19
 - **SQLite** + Prisma ORM (WAL mode)
-- **OpenAI API** (gpt-5/gpt-4o) for quote generation
+- **OpenAI API** (GPT-5.4/GPT-5.5 routes) for candidate generation with Structured Outputs
 - **CSS Modules** + global CSS variables for component styling
 - **Tailwind CSS** available (in devDependencies) but components use CSS Modules
 - **Framer Motion** for animations, **Lucide React** for icons
@@ -48,11 +48,11 @@ Entry point: `src/lib/ai-service.ts:getDailyQuote(userId, forcedDate?)`
 
 1. Check `DailyView` table for user+date → return cached quote if exists
 2. Fetch user preferences + optional admin AI config override
-3. Weighted random mode selection: QUOTE (50), QUESTION (30), PULSE (20)
-4. Pick random category from user interests
-5. Compress history via `HistoryCompressor` → banned authors/concepts blocklist
-6. Build prompt with `{{MODE}}`, `{{CATEGORY}}`, `{{INTERESTS}}`, `{{HISTORY_CODE}}` substitutions
-7. Call OpenAI → parse JSON response → save Quote + create DailyView record
+3. Build a deterministic `InspirationPlan` for the user/date with mode, category, format, tone, imagery world, and rhetorical device
+4. Compress history via `HistoryCompressor` → banned authors/concepts blocklist
+5. Generate multiple prompt-lane candidates through OpenAI Structured Outputs
+6. Score candidates with lexical/history/metadata novelty checks
+7. Save the highest-scoring Quote with variety metadata + create DailyView record
 
 **Race condition handling**: Multiple simultaneous requests for same user+date are handled via Prisma P2002 unique constraint error — loser fetches the winner's quote.
 
@@ -74,7 +74,7 @@ Two mechanisms ensure quotes are ready before users visit:
 ### Data Model (prisma/schema.prisma)
 
 - **User**: Profile with JSON `preferences` (interests array) and optional `aiConfig` (admin override for temperature, prompt, model, modeWeights)
-- **Quote**: Generated content with `concepts` (JSON array of explainable terms), `sourceModel`, `category`
+- **Quote**: Generated content with `concepts`, `sourceModel`, `category`, variety metadata, prompt version, novelty score, and generation trace
 - **DailyView**: Links User+Quote+Date. Unique constraint on `(userId, date)` — core caching mechanism
 - **Rating/Share**: Tracking for likes and shares (unique per user+quote)
 
@@ -109,8 +109,9 @@ Exported constants (visible in admin dashboard):
 - `ARCHETYPES_FOR_MODE` — archetype lists per mode (QUOTE/QUESTION/PULSE)
 - `MODE_INSTRUCTIONS` — mode-specific behavior instructions
 - `DEFAULT_MASTER_PROMPT` — main prompt template with `{{PLACEHOLDER}}` substitutions
+- `PROMPT_VERSION` — version marker stored with generated quote metadata
 
-Admin can override per user: `aiConfig.masterPrompt`, `temperature`, `modeWeights`, `model`.
+Admin can override per user: `aiConfig.masterPrompt`, `temperature`, `modeWeights`, `model`, `premiumModel`, `fallbackModel`, `candidateCount`.
 
 ### History Compression (`src/lib/history-compressor.ts`)
 
@@ -153,3 +154,4 @@ CRON_API_KEY="..."             # Optional: secures /api/cron/pregenerate
 ## Testing
 
 No test infrastructure exists yet. No test runner configured.
+Manual verification currently relies on `npm run lint`, `npx tsc --noEmit`, `DATABASE_URL=file:./ci.db npx prisma validate`, and `DATABASE_URL=file:./ci.db npm run build`.

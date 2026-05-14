@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd()
+  },
   // Allow all local dev origins
   experimental: {
     serverActions: {
