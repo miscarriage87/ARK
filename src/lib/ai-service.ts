@@ -366,9 +366,13 @@ async function getRecentQuotes(userId: string, beforeDate: string): Promise<Rece
                     content: true,
                     category: true,
                     format: true,
+                    perspective: true,
                     tone: true,
                     imageryWorld: true,
-                    rhetoricalDevice: true
+                    rhetoricalDevice: true,
+                    timeHorizon: true,
+                    actionType: true,
+                    difficulty: true
                 }
             }
         }
@@ -378,9 +382,13 @@ async function getRecentQuotes(userId: string, beforeDate: string): Promise<Rece
         content: view.quote.content,
         category: view.quote.category,
         format: view.quote.format,
+        perspective: view.quote.perspective,
         tone: view.quote.tone,
         imageryWorld: view.quote.imageryWorld,
-        rhetoricalDevice: view.quote.rhetoricalDevice
+        rhetoricalDevice: view.quote.rhetoricalDevice,
+        timeHorizon: view.quote.timeHorizon,
+        actionType: view.quote.actionType,
+        difficulty: view.quote.difficulty
     }));
 }
 
@@ -388,9 +396,13 @@ function recentSignalsFromQuotes(recentQuotes: RecentQuoteForScoring[]): RecentI
     return recentQuotes.map((quote) => ({
         category: quote.category || undefined,
         format: quote.format || undefined,
+        perspective: quote.perspective || undefined,
         tone: quote.tone || undefined,
         imageryWorld: quote.imageryWorld || undefined,
-        rhetoricalDevice: quote.rhetoricalDevice || undefined
+        rhetoricalDevice: quote.rhetoricalDevice || undefined,
+        timeHorizon: quote.timeHorizon || undefined,
+        actionType: quote.actionType || undefined,
+        difficulty: quote.difficulty || undefined
     }));
 }
 

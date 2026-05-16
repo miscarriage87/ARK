@@ -229,16 +229,17 @@ export function buildInspirationPlan(input: {
         rhetoricalDevice: pickLeastRecent(VARIETY_AXES.rhetoricalDevices, recentSignals, "rhetoricalDevice", rng),
         timeHorizon: pickLeastRecent(VARIETY_AXES.timeHorizons, recentSignals, "timeHorizon", rng),
         actionType: pickLeastRecent(VARIETY_AXES.actionTypes, recentSignals, "actionType", rng),
-        difficulty: VARIETY_AXES.difficulties[Math.floor(rng() * VARIETY_AXES.difficulties.length)],
-        lane: pickLeastRecent(VARIETY_AXES.lanes, recentSignals, "mode", rng)
+        difficulty: pickLeastRecent(VARIETY_AXES.difficulties, recentSignals, "difficulty", rng),
+        lane: pickLeastRecent(VARIETY_AXES.lanes, recentSignals, "lane", rng)
     };
 }
 
 export function buildCandidatePlans(basePlan: InspirationPlan, count = 3): InspirationPlan[] {
     const rng = createRng(`${basePlan.seed}:candidates`);
+    const laneOffset = indexIn(VARIETY_AXES.lanes, basePlan.lane);
 
     return Array.from({ length: Math.max(1, count) }, (_, index) => {
-        const lane = VARIETY_AXES.lanes[index % VARIETY_AXES.lanes.length];
+        const lane = VARIETY_AXES.lanes[(laneOffset + index) % VARIETY_AXES.lanes.length];
 
         return {
             ...basePlan,

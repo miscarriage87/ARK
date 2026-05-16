@@ -4,9 +4,13 @@ import type { QuoteCandidate } from "./quote-output";
 export type RecentQuoteForScoring = {
     content: string;
     format: string | null;
+    perspective: string | null;
     tone: string | null;
     imageryWorld: string | null;
     rhetoricalDevice: string | null;
+    timeHorizon: string | null;
+    actionType: string | null;
+    difficulty: string | null;
     category: string | null;
 };
 
