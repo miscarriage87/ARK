@@ -29,10 +29,17 @@ export function isValidUUID(str: string): boolean {
 }
 
 /**
- * Formatiert ein Datum als "YYYY-MM-DD"
+ * Formats a date as "YYYY-MM-DD" in the browser's local timezone (client-safe, no env access).
  */
-export function formatDateString(date: Date = new Date()): string {
-    return date.toISOString().split("T")[0];
+export function formatLocalDate(date: Date = new Date()): string {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(date);
+
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
 /**

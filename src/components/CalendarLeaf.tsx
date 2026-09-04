@@ -1,9 +1,10 @@
 "use client";
-import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, AnimatePresence, type PanInfo } from "framer-motion";
 import { useState, type ReactNode } from "react";
-import { Quote, Share2, Heart } from "lucide-react";
+import { Share2, ThumbsDown, ThumbsUp, Zap } from "lucide-react";
 import styles from "./CalendarLeaf.module.css";
 import ConceptOverlay from "./ConceptOverlay";
+import type { RatingVerdict } from "@/lib/taste-profile";
 
 type Concept = {
     word: string;
@@ -15,8 +16,19 @@ type CalendarQuote = {
     content: string;
     author: string | null;
     explanation: string | null;
+    headline?: string | null;
+    microAction?: string | null;
     concepts: string | null;
     isLiked?: boolean;
+    userRating?: RatingVerdict | null;
+};
+
+type CalendarLeafProps = {
+    quote: CalendarQuote;
+    dateStr: string;
+    userId?: string;
+    /** Fired once when the user tears off the leaf. */
+    onReveal?: () => void;
 };
 
 function parseConcepts(conceptsJson: string | null): Concept[] {
@@ -40,10 +52,16 @@ function parseConcepts(conceptsJson: string | null): Concept[] {
     }
 }
 
-export default function CalendarLeaf({ quote, dateStr, userId }: { quote: CalendarQuote, dateStr: string, userId?: string }) {
+function vibrate(ms: number) {
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(ms);
+}
+
+export default function CalendarLeaf({ quote, dateStr, userId, onReveal }: CalendarLeafProps) {
     const [revealed, setRevealed] = useState(false);
     const [activeConcept, setActiveConcept] = useState<Concept | null>(null);
-    const [liked, setLiked] = useState(quote.isLiked || false);
+    const [rating, setRating] = useState<RatingVerdict | null>(quote.userRating ?? (quote.isLiked ? "up" : null));
+    const [isRating, setIsRating] = useState(false);
+    const [hint, setHint] = useState<string | null>(null);
 
     const y = useMotionValue(0);
     const rotate = useTransform(y, [0, 300], [0, 15]);
@@ -52,7 +70,8 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
     const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (info.offset.y > 100) {
             setRevealed(true);
-            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+            vibrate(20);
+            onReveal?.();
         }
     };
 
@@ -61,28 +80,51 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
     const month = displayDate.toLocaleDateString("de-DE", { month: "long" });
     const weekday = displayDate.toLocaleDateString("de-DE", { weekday: "long" });
 
-    const handleRate = async () => {
-        if (liked) return; // Prevent double click
-        setLiked(true); // Optimistic UI
+    const showHint = (text: string) => {
+        setHint(text);
+        setTimeout(() => setHint(null), 2600);
+    };
+
+    const handleRate = async (verdict: RatingVerdict) => {
+        if (rating || isRating) return; // one verdict per leaf
+
+        setIsRating(true);
+        setRating(verdict); // optimistic
+        vibrate(10);
+
         try {
-            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-            await fetch("/api/quote/rate", {
+            const res = await fetch("/api/quote/rate", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     ...(userId ? { "x-user-id": userId } : {})
                 },
-                body: JSON.stringify({ quoteId: quote.id, score: 5 }),
+                body: JSON.stringify({ quoteId: quote.id, verdict }),
             });
-            // alert("Danke! Das Zitat wurde gespeichert."); // Removed alert for smoother UX
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || `Fehler ${res.status}`);
+            }
+
+            if (data.alreadyRated && (data.verdict === "up" || data.verdict === "down")) {
+                setRating(data.verdict);
+                showHint("Du hast dieses Blatt schon bewertet.");
+            } else {
+                showHint(verdict === "up" ? "Danke! Mehr in diese Richtung." : "Danke! Davon künftig weniger.");
+            }
         } catch (e) {
             console.error(e);
-            setLiked(false); // Revert on error
+            setRating(null);
+            showHint("Bewertung konnte nicht gespeichert werden.");
+        } finally {
+            setIsRating(false);
         }
     };
 
     const handleShare = async () => {
-        const shareText = `"${quote.content}" — ${quote.author}`;
+        const authorSuffix = quote.author && !["Einsicht", "Reflexion", "Impuls"].includes(quote.author) ? ` — ${quote.author}` : "";
+        const shareText = `"${quote.content}"${authorSuffix}`;
         const shareData: ShareData = {
             title: 'ARK',
             text: shareText,
@@ -100,13 +142,13 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(shareText);
-                    alert("Zitat kopiert!");
+                    showHint("Zitat kopiert.");
                 } else {
                     throw new Error("Clipboard API not available");
                 }
             } catch (err) {
                 console.error('Clipboard error', err);
-                alert("Teilen fehlgeschlagen. Bitte kopiere den Text manuell.");
+                showHint("Teilen fehlgeschlagen. Bitte kopiere den Text manuell.");
             }
         }
     };
@@ -121,13 +163,11 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
         // Sort by length desc (longest match first)
         concepts.sort((a, b) => b.word.length - a.word.length);
 
-        // Escape regex chars
         const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         const escapedWords = concepts.map((concept) => escapeRegExp(concept.word));
         if (escapedWords.length === 0) return text;
 
-        // Build regex with word boundaries to avoid partial matches inside words.
         const iterPattern = new RegExp(`\\b(${escapedWords.join('|')})\\b`, 'gi');
 
         if (!text.match(iterPattern)) return text;
@@ -175,6 +215,8 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
         return result;
     };
 
+    const ratingLocked = rating !== null;
+
     return (
         <div className={styles.container}>
             <ConceptOverlay
@@ -186,7 +228,12 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
             {/* The Quote (Underneath) */}
             <div className={styles.quoteCard}>
                 <div className={styles.quoteContent}>
-                    <Quote className={styles.icon} />
+                  <div className={styles.quoteInner}>
+                    {quote.headline ? (
+                        <p className={styles.headline}>{quote.headline}</p>
+                    ) : (
+                        <span className={styles.headlineMark} aria-hidden="true">✦</span>
+                    )}
 
                     <h2 className={styles.quoteText}>
                         &ldquo;{renderInteractiveText(quote.content, quote.concepts)}&rdquo;
@@ -204,14 +251,62 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
                         </div>
                     )}
 
-
+                    {quote.microAction && (
+                        <div className={styles.microAction}>
+                            <Zap size={14} className={styles.microActionIcon} aria-hidden="true" />
+                            <div>
+                                <span className={styles.microActionLabel}>Heute</span>
+                                <span className={styles.microActionText}>{quote.microAction}</span>
+                            </div>
+                        </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className={styles.actions}>
-                    <button onClick={handleRate} className={styles.actionBtn}>
-                        <Heart size={18} fill={liked ? "currentColor" : "none"} className={liked ? "text-red-500" : ""} />
-                    </button>
-                    <button onClick={handleShare} className={styles.actionBtn}><Share2 size={18} /></button>
+                <div className={styles.actionsWrap}>
+                    <div className={styles.hintSlot} aria-live="polite">
+                        <AnimatePresence>
+                            {hint && (
+                                <motion.span
+                                    key={hint}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className={styles.hint}
+                                >
+                                    {hint}
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    <div className={styles.actions}>
+                        <button
+                            type="button"
+                            onClick={() => handleRate("up")}
+                            disabled={ratingLocked || isRating}
+                            aria-pressed={rating === "up"}
+                            aria-label="Gefällt mir"
+                            title="Gut: mehr davon"
+                            className={`${styles.actionBtn} ${rating === "up" ? styles.actionBtnUp : ""} ${rating === "down" ? styles.actionBtnMuted : ""}`}
+                        >
+                            <ThumbsUp size={18} fill={rating === "up" ? "currentColor" : "none"} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleRate("down")}
+                            disabled={ratingLocked || isRating}
+                            aria-pressed={rating === "down"}
+                            aria-label="Gefällt mir nicht"
+                            title="Schlecht: weniger davon"
+                            className={`${styles.actionBtn} ${rating === "down" ? styles.actionBtnDown : ""} ${rating === "up" ? styles.actionBtnMuted : ""}`}
+                        >
+                            <ThumbsDown size={18} fill={rating === "down" ? "currentColor" : "none"} />
+                        </button>
+                        <button type="button" onClick={handleShare} className={styles.actionBtn} aria-label="Teilen" title="Teilen">
+                            <Share2 size={18} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -226,7 +321,6 @@ export default function CalendarLeaf({ quote, dateStr, userId }: { quote: Calend
                     whileHover={{ scale: 1.02 }}
                     className={styles.leaf}
                 >
-                    {/* Header */}
                     <div className={styles.header}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.1em' }}>
                             {weekday.toUpperCase()}

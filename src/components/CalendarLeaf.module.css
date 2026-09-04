@@ -1,11 +1,10 @@
 .container {
     position: relative;
-    /* Smart Scaling: Use 85% of the shortest viewport side, capped at 450px */
-    width: 85vmin;
-    max-width: 450px;
-    /* Aspect ratio 3:4 roughly */
-    height: 113vmin;
-    max-height: 600px;
+    /* Smart scaling: 85% of the shortest viewport side, capped at 450px */
+    width: min(85vmin, 450px);
+    /* Tall enough for headline, thought, explanation and micro action on phones */
+    height: min(72vh, 640px);
+    min-height: 440px;
 
     margin: 0 auto;
     perspective: 1000px;
@@ -31,32 +30,48 @@
     z-index: 0;
 }
 
-/* Container for text to keeping it centered-ish */
+/* Scroll container: centers short content, scrolls from the top when it overflows */
 .quoteContent {
     flex: 1;
+    min-height: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
     overflow-y: auto;
-    /* Scroll if absolutely huge */
+    scrollbar-width: thin;
 }
 
-.icon {
-    width: 2rem;
-    height: 2rem;
+.quoteInner {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.headline {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: hsl(var(--secondary));
+    margin: 0 0 1rem 0;
+    flex-shrink: 0;
+}
+
+.headlineMark {
     color: hsl(var(--primary));
-    margin-bottom: 1rem;
     opacity: 0.8;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
     flex-shrink: 0;
 }
 
 .quoteText {
     font-family: var(--font-serif);
-    font-size: 1.35rem;
-    /* Slight resize for safety */
+    font-size: 1.3rem;
     line-height: 1.4;
-    margin-bottom: 1rem;
+    margin-bottom: 0.9rem;
     font-weight: 500;
     color: hsl(var(--foreground));
 }
@@ -65,26 +80,80 @@
     color: hsl(var(--secondary));
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
+/* Readable by design: this is the "why it matters" part of the leaf */
 .explanation {
-    font-size: 0.75rem;
-    opacity: 0.6;
-    line-height: 1.5;
+    font-size: 0.86rem;
+    opacity: 0.8;
+    line-height: 1.55;
     max-width: 100%;
     margin-bottom: 0;
 }
 
+.microAction {
+    margin-top: 1rem;
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.85rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.microActionIcon {
+    color: #fbbf24;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.microActionLabel {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    opacity: 0.9;
+    margin-bottom: 0.15rem;
+}
+
+.microActionText {
+    display: block;
+    color: hsl(var(--foreground));
+    opacity: 0.9;
+}
+
+.actionsWrap {
+    position: relative;
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.hintSlot {
+    min-height: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .actions {
     position: relative;
-    /* relative flow */
-    bottom: auto;
-    margin-top: 1rem;
     display: flex;
-    gap: 1rem;
+    gap: 0.9rem;
     flex-shrink: 0;
 }
 
@@ -92,7 +161,7 @@
     padding: 0.75rem;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.05);
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, opacity 0.2s, transform 0.2s;
     border: none;
     color: inherit;
     cursor: pointer;
@@ -101,8 +170,27 @@
     justify-content: center;
 }
 
-.actionBtn:hover {
+.actionBtn:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.actionBtn:disabled {
+    cursor: default;
+}
+
+.actionBtnUp {
+    color: #fbbf24;
+    background-color: rgba(251, 191, 36, 0.15);
+}
+
+.actionBtnDown {
+    color: #9ca3af;
+    background-color: rgba(156, 163, 175, 0.15);
+}
+
+.actionBtnMuted {
+    opacity: 0.3;
 }
 
 /* The Tear-Off Leaf (Top) */
@@ -173,6 +261,13 @@
     color: #9ca3af;
 }
 
+.quoteCard .hint {
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 0.72rem;
+    color: #d1d5db;
+}
+
 /* Simple pill shape for visual cue */
 .pill {
     width: 0.25rem;
@@ -204,5 +299,25 @@
     100% {
         transform: scaleY(1);
         opacity: 1;
+    }
+}
+
+/* Compact type on small phones so the whole leaf fits without scrolling */
+@media (max-width: 420px) {
+    .quoteCard {
+        padding: 1.5rem 1.15rem 0.9rem 1.15rem;
+    }
+
+    .quoteText {
+        font-size: 1.15rem;
+    }
+
+    .explanation {
+        font-size: 0.8rem;
+    }
+
+    .microAction {
+        font-size: 0.78rem;
+        padding: 0.55rem 0.75rem;
     }
 }

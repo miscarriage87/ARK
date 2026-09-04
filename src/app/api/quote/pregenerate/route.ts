@@ -2,69 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
 import { cookies } from "next/headers";
-import { addDays, formatAppDate, isValidUUID } from "@/lib/utils";
+import { addDays, formatAppDate, isValidUUID, logger } from "@/lib/utils";
 
 /**
  * POST /api/quote/pregenerate
  *
- * Generiert das Zitat für den nächsten Tag im Hintergrund.
- * Wird nach Anzeige des heutigen Zitats aufgerufen (fire-and-forget).
+ * Generates tomorrow's leaf for the current user in the background.
+ * Triggered by the client after today's leaf was shown (fire-and-forget).
+ * The userId must match the session cookie.
  */
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const { userId } = body;
+        const body = await req.json().catch(() => null);
+        const userId = body && typeof body === "object" ? (body as { userId?: unknown }).userId : null;
         const cookieUserId = (await cookies()).get("ark_user_id")?.value;
 
         if (!userId || typeof userId !== "string" || !isValidUUID(userId)) {
-            return NextResponse.json(
-                { error: "userId ist erforderlich" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "userId ist erforderlich" }, { status: 400 });
         }
 
         if (!cookieUserId || cookieUserId !== userId) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Berechne morgen in der App-Zeitzone
         const tomorrowStr = formatAppDate(addDays(new Date(), 1));
 
-        // Prüfe ob bereits existiert
         const existing = await prisma.dailyView.findUnique({
-            where: {
-                userId_date: {
-                    userId,
-                    date: tomorrowStr
-                }
-            }
+            where: { userId_date: { userId, date: tomorrowStr } },
+            select: { id: true }
         });
 
         if (existing) {
-            return NextResponse.json({
-                status: "already_exists",
-                date: tomorrowStr
-            });
+            return NextResponse.json({ status: "already_exists", date: tomorrowStr });
         }
 
-        // Generiere für morgen
-        console.log(`[Pregenerate] Starte Vorgenerierung für User ${userId}, Datum ${tomorrowStr}`);
+        logger.info(`[Pregenerate] Generating ${tomorrowStr} for user ${userId}`);
         await getDailyQuote(userId, tomorrowStr);
-        console.log(`[Pregenerate] Vorgenerierung abgeschlossen für User ${userId}`);
 
-        return NextResponse.json({
-            status: "generated",
-            date: tomorrowStr
-        });
-
+        return NextResponse.json({ status: "generated", date: tomorrowStr });
     } catch (error) {
-        console.error("[Pregenerate] Fehler:", error);
-        return NextResponse.json(
-            { error: "Vorgenerierung fehlgeschlagen" },
-            { status: 500 }
-        );
+        logger.error("[Pregenerate] Failed:", error);
+        return NextResponse.json({ error: "Vorgenerierung fehlgeschlagen" }, { status: 500 });
     }
 }

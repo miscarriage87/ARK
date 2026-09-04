@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { HistoryCompressor } from "./history-compressor";
@@ -6,11 +5,12 @@ import {
     buildCandidatePlans,
     buildInspirationPlan,
     type InspirationPlan,
-    type ModeWeights,
     type RecentInspirationSignal
 } from "./inspiration-plan";
 import {
+    JudgeVerdictSchema,
     QuoteCandidateSchema,
+    judgeResponseFormat,
     quoteCandidateResponseFormat,
     type QuoteCandidate
 } from "./quote-output";
@@ -20,25 +20,31 @@ import {
     type RecentQuoteForScoring
 } from "./novelty-scorer";
 import { formatAppDate, safeJsonParse, logger } from "./utils";
+import { isOpenAIConfigured, structuredCompletion } from "./openai-client";
+import { resolveAiConfig, type ResolvedAIConfig } from "./ai-config";
+import { ensureFreshTasteProfile } from "./feedback-service";
+import {
+    planPreferencesFromProfile,
+    tasteProfilePromptBlock,
+    verdictFromScore,
+    type RatingVerdict,
+    type TasteProfile
+} from "./taste-profile";
 
-const openai = process.env.OPENAI_API_KEY
-    ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    : null;
-
-export const PROMPT_VERSION = "ark-variety-v1";
+export const PROMPT_VERSION = "ark-variety-v2";
 
 // --- EXPORTED SYSTEM CONSTANTS (For Admin Visibility) ---
 
 export const CATEGORY_STYLE_GUIDE = {
     "Achtsamkeit": `
 - Pflicht: 1 konkretes Sinnesdetail (Geräusch, Textur, Licht, Temperatur).
-- Fokus: Beobachten, Entschleunigung, Präsenz.
-- Vermeide: Esoterik-Floskeln, "Universum".`,
+- Fokus: Beobachten, Entschleunigung, Präsenz im Alltag.
+- Vermeide: Esoterik-Floskeln, "Universum", Atem-Anweisungen.`,
 
     "Spiritualität": `
 - Pflicht: Perspektive 'Größer als ich' (Verbindung, Sinn, Staunen).
 - Ton: Tiefgründig, aber geerdet (kein "Licht & Liebe" Kitsch).
-- Vermeide: Dogma, strafender Gott.`,
+- Vermeide: Dogma, strafender Gott, Nebelsprache.`,
 
     "Stoizismus": `
 - Pflicht: Fokus auf das, was kontrollierbar ist (Innenwelt vs Außenwelt).
@@ -48,7 +54,7 @@ export const CATEGORY_STYLE_GUIDE = {
     "Unternehmertum": `
 - Pflicht: Fokus auf Wertschöpfung, Problemlösung oder Resilienz.
 - Ton: High Agency, proaktiv, risikobewusst, "Skin in the Game".
-- Vermeide: Passivität, "Hoffnung", "Glück haben".`,
+- Vermeide: Passivität, "Hoffnung", "Glück haben", Startup-Jargon.`,
 
     "Wissenschaft": `
 - Pflicht: Neugier, Hypothese, Experiment oder kosmische Perspektive.
@@ -63,7 +69,7 @@ export const CATEGORY_STYLE_GUIDE = {
     "Poesie": `
 - Pflicht: Fokus auf Sprachmelodie, starke Metaphern, Verdichtung.
 - Ton: Lyrisch, sanft, aber bildgewaltig.
-- Stil: Nutze Alliteration oder Rhythmus.`,
+- Stil: Nutze Alliteration oder Rhythmus, bleib trotzdem verständlich.`,
 
     "Führung": `
 - Pflicht: Verantwortung, Dienen, Klarheit, schwierige Entscheidungen.
@@ -89,26 +95,37 @@ export const ARCHETYPES_FOR_MODE = {
 
 export const MODE_INSTRUCTIONS = {
     QUOTE: `
-- Erzeuge einen ORIGINAL-Aphorismus (kein echtes Zitat behaupten).
-- author: "Einsicht"
-- Kein Fragezeichen.`,
+- Erzeuge einen ORIGINAL-Aphorismus (kein echtes Zitat, keinen echten Namen behaupten).
+- Ein Bild, eine Wendung, ein Gedanke. Kein Fragezeichen.
+- author: "Einsicht"`,
     QUESTION: `
-- Formuliere eine radikale, direkte Frage in Du-Form.
-- Keine Standardfragen, kein "Was hält dich ab".
+- Formuliere genau EINE direkte Frage in Du-Form, die man ehrlich nur mit einer konkreten Antwort beantworten kann.
+- Keine rhetorische Frage, keine Doppelfrage, kein "Was hält dich ab".
 - author: "Reflexion"`,
     PULSE: `
-- Formuliere einen kurzen Impuls/Mantra in Du-Form, handlungsnah.
-- Kein Atem, keine Stille.
+- Formuliere einen kurzen Impuls in Du-Form: eine Handlung, ein Schalter, ein Test für heute.
+- Handlungsnah und konkret, ohne Esoterik. Kein Atem, keine Stille.
 - author: "Impuls"`
 };
 
+export const LANE_GUIDE: Record<string, string> = {
+    clarity: "Maximal klar und schlicht: der Gedanke muss beim ersten Lesen sitzen, ohne Schmuck.",
+    sensory: "Ein starkes, konkretes Sinnesbild trägt den Gedanken (etwas, das man sehen, hören oder anfassen kann).",
+    contrarian: "Dreht eine gängige Annahme freundlich um und zeigt, warum das Gegenteil hilft.",
+    practical: "So konkret, dass man es heute in unter fünf Minuten tun kann."
+};
+
 export const DEFAULT_MASTER_PROMPT = `
-Du bist kein allgemeiner Sprüche-Automat. Du kuratierst einen digitalen Abreißkalender.
-Jeder Tag muss sich anders anfühlen: andere Bildwelt, andere Denkbewegung, anderer Ton.
+Du kuratierst einen digitalen Abreißkalender. Jeden Tag genau ein Blatt.
+Ein gutes Blatt hat drei Eigenschaften, in dieser Reihenfolge:
+1. SOFORT VERSTÄNDLICH: Beim ersten Lesen klar, ohne Vorwissen, ohne Fachjargon. Ein Gedanke, ein Bild, eine Wendung. Keine verschachtelten Metaphern.
+2. WIRKUNG: Es überrascht, bleibt hängen oder ändert heute eine kleine Entscheidung. Lieber eine konkrete Szene als eine allgemeine Weisheit.
+3. ABWECHSLUNG: Es fühlt sich anders an als die letzten Blätter: andere Bildwelt, anderer Rhythmus, andere Denkbewegung.
 
 Format heute: {{MODE}}
 Kategorie: {{CATEGORY}}
 User-Interessen: {{INTERESTS}}
+Wochentag-Färbung: {{DAY_FLAVOR}}
 
 KATEGORIE-LINSE:
 {{CATEGORY_STYLE_GUIDE}}
@@ -116,16 +133,25 @@ KATEGORIE-LINSE:
 MODE-INSTRUKTIONEN:
 {{MODE_INSTRUCTIONS}}
 
-ANTI-KLISCHEE:
-- Kein Start mit: "Was hält dich davon ab", "Fühle", "In der Stille"
-- Vermeide: "Tauch ein", "Lass los", "Hier und Jetzt", "Atem", "Präsenz"
-- Keine Floskeln über "Seele/Universum" außer Kategorie verlangt es explizit.
-- content muss kurz sein (70-160 Zeichen), konkret, bildhaft und originell.
+{{TASTE_PROFILE}}
+
+BAUPLAN DES BLATTS:
+- headline: 2-5 Wörter, wie ein Titel auf dem Kalenderblatt. Konkret, macht neugierig, kein Klischee, kein Doppelpunkt.
+- content: 1 Satz (höchstens 2 kurze), 60-150 Zeichen. Einfache Wörter, konkrete Dinge, ein klarer Gedanke. Kein Nebensatz-Gestrüpp.
+- explanation: 2-3 kurze Sätze in Du-Form. Erster Satz: Was der Gedanke im Kern meint, so einfach, dass es ein Kind versteht. Zweiter Satz: Warum das heute nützt. Nicht den content wiederholen.
+- microAction: Ein konkreter, kleiner Schritt für heute (max. 90 Zeichen). Beginnt mit einem Verb, ist beobachtbar oder messbar, passt zum actionType des Plans.
+- concepts: 0-3 Wörter aus content oder explanation, die eine kurze Erklärung verdienen (Definition in einem Satz).
+
+ANTI-KLISCHEE (hart):
+- Kein Start mit: "Was hält dich davon ab", "Fühle", "In der Stille", "Stell dir vor"
+- Vermeide: "Tauch ein", "Lass los", "Hier und Jetzt", "Atem", "Präsenz", "Reise", "Energie", "Universum", "Magie", "Sei einfach"
+- Keine Kalenderspruch-Allgemeinplätze ("Jeder Tag ist ein Geschenk"). Keine Reihung von drei Adjektiven.
+- Keine Seelen-/Universums-Floskeln, außer die Kategorie verlangt es ausdrücklich.
 
 HISTORY:
 Verbotene Autoren: {{BANNED_AUTHORS}}
 Vermeide Konzepte: {{BANNED_CONCEPTS}}
-Letzte Einträge:
+Letzte Einträge (so NICHT noch einmal):
 {{RECENT_CONTENT}}
 `;
 
@@ -133,14 +159,13 @@ type UserPreferences = {
     interests?: string[];
 };
 
-type AIConfig = {
-    temperature: number;
-    modeWeights: ModeWeights;
-    masterPrompt: string;
-    model: string;
-    premiumModel: string;
-    fallbackModel: string;
-    candidateCount: number;
+type JudgeResult = {
+    clarity: number;
+    impact: number;
+    fit: number;
+    comment: string;
+    /** 0..1 */
+    score: number;
 };
 
 type GeneratedCandidate = {
@@ -148,41 +173,13 @@ type GeneratedCandidate = {
     plan: InspirationPlan;
     score: NoveltyScore;
     sourceModel: string;
+    judge: JudgeResult | null;
+    finalScore: number;
 };
 
-const DEFAULT_AI_CONFIG: AIConfig = {
-    temperature: 1.0,
-    modeWeights: { quote: 50, question: 30, pulse: 20 },
-    masterPrompt: "",
-    model: "gpt-5.4-mini",
-    premiumModel: "gpt-5.5",
-    fallbackModel: "gpt-5.4-nano",
-    candidateCount: 3
-};
+type HistoryData = { authorsString: string; conceptsString: string; fullCode: string };
 
-function clamp(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-}
-
-function resolveAiConfig(rawConfig: string | null): AIConfig {
-    const parsed = safeJsonParse<Partial<AIConfig>>(rawConfig, {});
-    const modeWeights = {
-        ...DEFAULT_AI_CONFIG.modeWeights,
-        ...(parsed.modeWeights || {})
-    };
-
-    return {
-        ...DEFAULT_AI_CONFIG,
-        ...parsed,
-        temperature: clamp(Number(parsed.temperature ?? DEFAULT_AI_CONFIG.temperature), 0, 2),
-        modeWeights: {
-            quote: clamp(Number(modeWeights.quote ?? 0), 0, 100),
-            question: clamp(Number(modeWeights.question ?? 0), 0, 100),
-            pulse: clamp(Number(modeWeights.pulse ?? 0), 0, 100)
-        },
-        candidateCount: clamp(Number(parsed.candidateCount ?? DEFAULT_AI_CONFIG.candidateCount), 1, 5)
-    };
-}
+const JUDGE_WEIGHT = 0.45;
 
 function promptValue(value: string | null | undefined, fallback = ""): string {
     return value && value.trim().length > 0 ? value : fallback;
@@ -205,8 +202,9 @@ function recentContentBlock(recentQuotes: RecentQuoteForScoring[]): string {
                 quote.imageryWorld,
                 quote.rhetoricalDevice
             ].filter(Boolean).join(" / ");
+            const headline = quote.headline ? `${quote.headline}: ` : "";
 
-            return `${index + 1}. ${meta ? `[${meta}] ` : ""}${quote.content}`;
+            return `${index + 1}. ${meta ? `[${meta}] ` : ""}${headline}${quote.content}`;
         })
         .join("\n");
 }
@@ -215,43 +213,52 @@ function substitutePrompt(input: {
     template: string;
     plan: InspirationPlan;
     interests: string[];
-    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    historyData: HistoryData;
     recentQuotes: RecentQuoteForScoring[];
+    profile: TasteProfile | null;
 }): string {
     const archetypes = ARCHETYPES_FOR_MODE[input.plan.mode] || ["Standard"];
+    const tasteBlock = tasteProfilePromptBlock(input.profile);
+    const template = input.template.includes("{{TASTE_PROFILE}}")
+        ? input.template
+        : `${input.template}\n\n{{TASTE_PROFILE}}`;
 
-    return input.template
+    return template
         .replace(/{{MODE}}/g, input.plan.mode)
         .replace(/{{INTERESTS}}/g, input.interests.join(", ") || "Leben, Liebe, Erfolg")
         .replace(/{{CATEGORY}}/g, input.plan.category)
+        .replace(/{{DAY_FLAVOR}}/g, input.plan.dayFlavor)
         .replace(/{{BANNED_AUTHORS}}/g, promptValue(input.historyData.authorsString, "Keine"))
         .replace(/{{BANNED_CONCEPTS}}/g, promptValue(input.historyData.conceptsString, "Keine"))
         .replace(/{{HISTORY_CODE}}/g, promptValue(input.historyData.fullCode, "(Neu)"))
         .replace(/{{RECENT_CONTENT}}/g, recentContentBlock(input.recentQuotes))
-        .replace(/{{CATEGORY_STYLE_GUIDE}}/g, getStyleGuide(input.plan.category))
+        .replace(/{{CATEGORY_STYLE_GUIDE}}/g, getStyleGuide(input.plan.category).trim())
         .replace(/{{ARCHETYPES_FOR_MODE}}/g, archetypes.join(", "))
-        .replace(/{{MODE_INSTRUCTIONS}}/g, MODE_INSTRUCTIONS[input.plan.mode] || "");
+        .replace(/{{MODE_INSTRUCTIONS}}/g, (MODE_INSTRUCTIONS[input.plan.mode] || "").trim())
+        .replace(/{{TASTE_PROFILE}}/g, tasteBlock);
 }
 
 function composeCandidatePrompt(input: {
     plan: InspirationPlan;
     interests: string[];
-    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    historyData: HistoryData;
     recentQuotes: RecentQuoteForScoring[];
     masterPrompt: string;
+    profile: TasteProfile | null;
 }): string {
     const basePrompt = substitutePrompt({
         template: input.masterPrompt || DEFAULT_MASTER_PROMPT,
         plan: input.plan,
         interests: input.interests,
         historyData: input.historyData,
-        recentQuotes: input.recentQuotes
+        recentQuotes: input.recentQuotes,
+        profile: input.profile
     });
 
     return `${basePrompt}
 
 VARIETY PLAN (strictly follow this lane):
-- lane: ${input.plan.lane}
+- lane: ${input.plan.lane} (${LANE_GUIDE[input.plan.lane] || "klar und konkret"})
 - format: ${input.plan.format}
 - perspective: ${input.plan.perspective}
 - tone: ${input.plan.tone}
@@ -263,9 +270,9 @@ VARIETY PLAN (strictly follow this lane):
 
 ABWECHSLUNGSPFLICHT:
 - Schreibe nicht wie die letzten Einträge.
-- Wiederhole keine Bildwelt, keine Satzschablone und keine Coaching-Floskel.
+- Wiederhole keine Bildwelt, keine Satzschablone, keine headline und keine Coaching-Floskel.
 - Nutze den Plan sichtbar, aber nicht mechanisch.
-- content und explanation müssen auf Deutsch sein.
+- headline, content, explanation und microAction müssen auf Deutsch sein.
 - concepts dürfen nur Wörter enthalten, die wirklich in content oder explanation vorkommen.
 
 Output: exactly one JSON object matching the configured schema.`;
@@ -279,15 +286,11 @@ function seedToNumber(seed: string): number {
     return hash;
 }
 
-function isReasoningModel(model: string): boolean {
-    return /^(gpt-5|o\d)/.test(model);
-}
-
 function shouldUsePremiumModel(plan: InspirationPlan): boolean {
     return seedToNumber(`${plan.seed}:premium`) % 7 === 0;
 }
 
-function selectModelForPlan(plan: InspirationPlan, aiConfig: AIConfig, index: number): string {
+function selectModelForPlan(plan: InspirationPlan, aiConfig: ResolvedAIConfig, index: number): string {
     if (index === 2 && shouldUsePremiumModel(plan)) {
         return aiConfig.premiumModel || aiConfig.model;
     }
@@ -298,38 +301,23 @@ function selectModelForPlan(plan: InspirationPlan, aiConfig: AIConfig, index: nu
 async function generateCandidateWithOpenAI(input: {
     plan: InspirationPlan;
     prompt: string;
-    aiConfig: AIConfig;
+    aiConfig: ResolvedAIConfig;
     model: string;
     userId: string;
 }): Promise<QuoteCandidate> {
-    if (!openai) {
-        throw new Error("OpenAI client not configured");
-    }
-
-    const completion = await openai.chat.completions.create({
+    return structuredCompletion({
         model: input.model,
-        messages: [
-            {
-                role: "system",
-                content: "Du erzeugst präzise, originelle Tagesinspirationen als gültiges JSON. Keine Erklärungen außerhalb des JSON."
-            },
-            { role: "user", content: input.prompt }
-        ],
-        response_format: quoteCandidateResponseFormat,
-        seed: seedToNumber(input.plan.seed),
-        prompt_cache_key: PROMPT_VERSION,
-        safety_identifier: seedToNumber(input.userId).toString(16),
-        ...(isReasoningModel(input.model)
-            ? { reasoning_effort: "low" as const }
-            : { temperature: input.aiConfig.temperature })
-    }, { timeout: 45_000 });
-
-    const content = completion.choices[0]?.message.content;
-    if (!content) {
-        throw new Error("OpenAI returned an empty candidate");
-    }
-
-    return QuoteCandidateSchema.parse(JSON.parse(content));
+        system: "Du erzeugst präzise, originelle und sofort verständliche Tagesinspirationen als gültiges JSON. Keine Erklärungen außerhalb des JSON.",
+        user: input.prompt,
+        schema: QuoteCandidateSchema,
+        responseFormat: quoteCandidateResponseFormat,
+        temperature: input.aiConfig.temperature,
+        reasoningEffort: "low",
+        seed: input.plan.seed,
+        cacheKey: PROMPT_VERSION,
+        safetyIdentifier: seedToNumber(input.userId).toString(16),
+        timeoutMs: 45_000
+    });
 }
 
 function createOfflineCandidate(plan: InspirationPlan): QuoteCandidate {
@@ -340,9 +328,11 @@ function createOfflineCandidate(plan: InspirationPlan): QuoteCandidate {
     };
 
     return {
+        headline: "Neuer Blick",
         content: contentByMode[plan.mode],
         author: plan.mode === "QUOTE" ? "Einsicht" : plan.mode === "QUESTION" ? "Reflexion" : "Impuls",
-        explanation: `Dieser Eintrag nutzt die ${plan.lane}-Perspektive und verschiebt den Fokus auf eine konkrete Beobachtung. Er ist als fallback gedacht, falls die Modellgenerierung nicht verfügbar ist.`,
+        explanation: `Dieser Eintrag nutzt die ${plan.lane}-Perspektive und verschiebt den Fokus auf eine konkrete Beobachtung. Er ist als Fallback gedacht, falls die Modellgenerierung nicht verfügbar ist.`,
+        microAction: "Schreib heute einen Satz auf, den du sonst nur denkst.",
         category: plan.category,
         concepts: [],
         format: plan.format,
@@ -364,6 +354,7 @@ async function getRecentQuotes(userId: string, beforeDate: string): Promise<Rece
             quote: {
                 select: {
                     content: true,
+                    headline: true,
                     category: true,
                     format: true,
                     perspective: true,
@@ -380,6 +371,7 @@ async function getRecentQuotes(userId: string, beforeDate: string): Promise<Rece
 
     return views.map((view) => ({
         content: view.quote.content,
+        headline: view.quote.headline,
         category: view.quote.category,
         format: view.quote.format,
         perspective: view.quote.perspective,
@@ -406,14 +398,28 @@ function recentSignalsFromQuotes(recentQuotes: RecentQuoteForScoring[]): RecentI
     }));
 }
 
+function normalizeCandidate(candidate: QuoteCandidate, plan: InspirationPlan): QuoteCandidate {
+    return {
+        ...candidate,
+        category: plan.category,
+        format: candidate.format || plan.format,
+        tone: candidate.tone || plan.tone,
+        imageryWorld: candidate.imageryWorld || plan.imageryWorld,
+        rhetoricalDevice: candidate.rhetoricalDevice || plan.rhetoricalDevice
+    };
+}
+
 async function generateCandidates(input: {
     userId: string;
     plans: InspirationPlan[];
     interests: string[];
-    historyData: { authorsString: string; conceptsString: string; fullCode: string };
+    historyData: HistoryData;
     recentQuotes: RecentQuoteForScoring[];
-    aiConfig: AIConfig;
+    aiConfig: ResolvedAIConfig;
+    profile: TasteProfile | null;
 }): Promise<GeneratedCandidate[]> {
+    const online = isOpenAIConfigured();
+
     const attempts = await Promise.all(input.plans.map(async (plan, index) => {
         const model = selectModelForPlan(plan, input.aiConfig, index);
         const prompt = composeCandidatePrompt({
@@ -421,39 +427,28 @@ async function generateCandidates(input: {
             interests: input.interests,
             historyData: input.historyData,
             recentQuotes: input.recentQuotes,
-            masterPrompt: input.aiConfig.masterPrompt
+            masterPrompt: input.aiConfig.masterPrompt,
+            profile: input.profile
         });
 
-        try {
-            const candidate = openai
-                ? await generateCandidateWithOpenAI({
-                    plan,
-                    prompt,
-                    aiConfig: input.aiConfig,
-                    model,
-                    userId: input.userId
-                })
-                : createOfflineCandidate(plan);
-            const normalizedCandidate = {
-                ...candidate,
-                category: plan.category,
-                format: candidate.format || plan.format,
-                tone: candidate.tone || plan.tone,
-                imageryWorld: candidate.imageryWorld || plan.imageryWorld,
-                rhetoricalDevice: candidate.rhetoricalDevice || plan.rhetoricalDevice
-            };
+        const build = (candidate: QuoteCandidate, sourceModel: string): GeneratedCandidate => {
+            const normalized = normalizeCandidate(candidate, plan);
             const score = scoreQuoteCandidate({
-                candidate: normalizedCandidate,
+                candidate: normalized,
                 plan,
-                recentQuotes: input.recentQuotes
+                recentQuotes: input.recentQuotes,
+                profile: input.profile
             });
 
-            return {
-                candidate: normalizedCandidate,
-                plan,
-                score,
-                sourceModel: openai ? model : "offline-variety"
-            };
+            return { candidate: normalized, plan, score, sourceModel, judge: null, finalScore: score.score };
+        };
+
+        try {
+            const candidate = online
+                ? await generateCandidateWithOpenAI({ plan, prompt, aiConfig: input.aiConfig, model, userId: input.userId })
+                : createOfflineCandidate(plan);
+
+            return build(candidate, online ? model : "offline-variety");
         } catch (error) {
             logger.warn("[QuoteService] Candidate generation failed", {
                 lane: plan.lane,
@@ -461,7 +456,7 @@ async function generateCandidates(input: {
                 error: error instanceof Error ? error.message : "unknown"
             });
 
-            if (model !== input.aiConfig.fallbackModel && openai) {
+            if (model !== input.aiConfig.fallbackModel && online) {
                 try {
                     const candidate = await generateCandidateWithOpenAI({
                         plan,
@@ -470,14 +465,13 @@ async function generateCandidates(input: {
                         model: input.aiConfig.fallbackModel,
                         userId: input.userId
                     });
-                    const score = scoreQuoteCandidate({ candidate, plan, recentQuotes: input.recentQuotes });
-                    return {
-                        candidate,
-                        plan,
-                        score,
-                        sourceModel: input.aiConfig.fallbackModel
-                    };
-                } catch {
+                    return build(candidate, input.aiConfig.fallbackModel);
+                } catch (fallbackError) {
+                    logger.warn("[QuoteService] Fallback generation failed", {
+                        lane: plan.lane,
+                        model: input.aiConfig.fallbackModel,
+                        error: fallbackError instanceof Error ? fallbackError.message : "unknown"
+                    });
                     return null;
                 }
             }
@@ -489,10 +483,101 @@ async function generateCandidates(input: {
     return attempts.filter((candidate): candidate is GeneratedCandidate => candidate !== null);
 }
 
+/**
+ * Editorial judge: a small model ranks the candidates on clarity, impact and fit.
+ * The result is blended with the local novelty score. Failures degrade to the local score.
+ */
+async function judgeCandidates(input: {
+    candidates: GeneratedCandidate[];
+    date: string;
+    plan: InspirationPlan;
+    interests: string[];
+    recentQuotes: RecentQuoteForScoring[];
+    profile: TasteProfile | null;
+    aiConfig: ResolvedAIConfig;
+    userId: string;
+}): Promise<GeneratedCandidate[]> {
+    if (input.candidates.length < 2 || !isOpenAIConfigured()) {
+        return input.candidates;
+    }
+
+    const candidateBlock = input.candidates
+        .map((entry, index) => [
+            `Kandidat ${index}:`,
+            `- headline: ${entry.candidate.headline}`,
+            `- content: ${entry.candidate.content}`,
+            `- explanation: ${entry.candidate.explanation}`,
+            `- microAction: ${entry.candidate.microAction}`,
+            `- plan: ${entry.plan.lane} / ${entry.candidate.format} / ${entry.candidate.tone} / ${entry.candidate.imageryWorld}`
+        ].join("\n"))
+        .join("\n\n");
+
+    const prompt = `Du bist Chefredakteur eines Abreißkalenders. Wähle das beste Blatt für ${input.date}.
+Format: ${input.plan.mode}, Kategorie: ${input.plan.category}, Interessen: ${input.interests.join(", ") || "unbekannt"}.
+Wochentag-Färbung: ${input.plan.dayFlavor}
+
+Bewerte jeden Kandidaten von 0 bis 10:
+- clarity: Sofort verständlich beim ersten Lesen, ohne Vorwissen. Konkret statt abstrakt, kein Jargon, kein Metaphern-Gestrüpp.
+- impact: Überrascht, bleibt hängen, löst einen Gedanken oder einen kleinen Schritt aus. Nicht austauschbar, kein Kalenderspruch-Allgemeinplatz.
+- fit: Passt zu Interessen und Nutzerprofil, wiederholt keinen der letzten Einträge, headline und microAction passen zum content.
+Bestrafe Klischees, Nebelsprache, Wiederholungen. Belohne einfache Wörter mit klarer Wendung.
+
+${tasteProfilePromptBlock(input.profile)}
+
+Letzte Einträge (nicht wiederholen):
+${recentContentBlock(input.recentQuotes.slice(0, 6))}
+
+${candidateBlock}
+
+Gib für jeden Kandidaten genau eine Bewertung zurück (index 0 bis ${input.candidates.length - 1}).`;
+
+    try {
+        const verdict = await structuredCompletion({
+            model: input.aiConfig.judgeModel,
+            system: "Du bewertest Kalenderblätter streng, fair und knapp. Antworte ausschließlich als JSON nach Schema.",
+            user: prompt,
+            schema: JudgeVerdictSchema,
+            responseFormat: judgeResponseFormat,
+            reasoningEffort: "low",
+            seed: `${input.plan.seed}:judge`,
+            cacheKey: `${PROMPT_VERSION}:judge`,
+            safetyIdentifier: seedToNumber(input.userId).toString(16),
+            timeoutMs: 40_000
+        });
+
+        const byIndex = new Map<number, JudgeResult>();
+        for (const evaluation of verdict.evaluations) {
+            if (evaluation.index < 0 || evaluation.index >= input.candidates.length) continue;
+            const score = (evaluation.clarity * 0.4 + evaluation.impact * 0.4 + evaluation.fit * 0.2) / 10;
+            byIndex.set(evaluation.index, {
+                clarity: evaluation.clarity,
+                impact: evaluation.impact,
+                fit: evaluation.fit,
+                comment: evaluation.comment,
+                score: Number(Math.max(0, Math.min(1, score)).toFixed(4))
+            });
+        }
+
+        return input.candidates.map((entry, index) => {
+            const judge = byIndex.get(index) ?? null;
+            const finalScore = judge
+                ? Number(((1 - JUDGE_WEIGHT) * entry.score.score + JUDGE_WEIGHT * judge.score).toFixed(4))
+                : entry.score.score;
+            return { ...entry, judge, finalScore };
+        });
+    } catch (error) {
+        logger.warn("[QuoteService] Judge failed, using local scoring only", {
+            model: input.aiConfig.judgeModel,
+            error: error instanceof Error ? error.message : "unknown"
+        });
+        return input.candidates;
+    }
+}
+
 function chooseWinner(candidates: GeneratedCandidate[]): GeneratedCandidate {
     const winner = candidates
         .slice()
-        .sort((a, b) => b.score.score - a.score.score)[0];
+        .sort((a, b) => b.finalScore - a.finalScore || b.score.score - a.score.score)[0];
 
     if (!winner) {
         throw new Error("No quote candidates could be generated");
@@ -506,6 +591,7 @@ async function buildGenerationContext(userId: string, date: string) {
     const prefs = safeJsonParse<UserPreferences>(user?.preferences, {});
     const interests = Array.isArray(prefs.interests) ? prefs.interests : [];
     const aiConfig = resolveAiConfig(user?.aiConfig || null);
+    const profile = user ? await ensureFreshTasteProfile(user) : null;
     const recentQuotes = await getRecentQuotes(userId, date);
     const historyData = await HistoryCompressor.calculateUserHistoryCode(userId, interests);
     const basePlan = buildInspirationPlan({
@@ -513,7 +599,8 @@ async function buildGenerationContext(userId: string, date: string) {
         date,
         interests,
         modeWeights: aiConfig.modeWeights,
-        recentSignals: recentSignalsFromQuotes(recentQuotes)
+        recentSignals: recentSignalsFromQuotes(recentQuotes),
+        preferences: planPreferencesFromProfile(profile)
     });
     const plans = buildCandidatePlans(basePlan, aiConfig.candidateCount);
 
@@ -522,6 +609,7 @@ async function buildGenerationContext(userId: string, date: string) {
         prefs,
         interests,
         aiConfig,
+        profile,
         recentQuotes,
         historyData,
         basePlan,
@@ -541,14 +629,25 @@ export async function buildDailyPromptPreview(userId: string, forcedDate?: strin
     return {
         date,
         plan,
+        profile: context.profile,
         prompt: composeCandidatePrompt({
             plan,
             interests: context.interests,
             historyData: context.historyData,
             recentQuotes: context.recentQuotes,
-            masterPrompt: context.aiConfig.masterPrompt
+            masterPrompt: context.aiConfig.masterPrompt,
+            profile: context.profile
         })
     };
+}
+
+async function loadUserVerdict(userId: string, quoteId: number): Promise<RatingVerdict | null> {
+    const rating = await prisma.rating.findFirst({
+        where: { userId, quoteId },
+        select: { score: true }
+    });
+
+    return rating ? verdictFromScore(rating.score) : null;
 }
 
 export async function getDailyQuote(userId: string, forcedDate?: string) {
@@ -567,34 +666,61 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
     });
 
     if (history) {
-        const rating = await prisma.rating.findFirst({ where: { userId, quoteId: history.quoteId } });
+        const userRating = await loadUserVerdict(userId, history.quoteId);
         return {
             ...history.quote,
             isNew: false,
-            isLiked: !!rating
+            isLiked: userRating === "up",
+            userRating
         };
     }
 
     logger.info(`[QuoteService] Generating daily inspiration for user ${userId} on ${today}`);
 
     const context = await buildGenerationContext(userId, today);
-    const candidates = await generateCandidates({
+    const rawCandidates = await generateCandidates({
         userId,
         plans: context.plans,
         interests: context.interests,
         historyData: context.historyData,
         recentQuotes: context.recentQuotes,
-        aiConfig: context.aiConfig
+        aiConfig: context.aiConfig,
+        profile: context.profile
+    });
+    const candidates = await judgeCandidates({
+        candidates: rawCandidates,
+        date: today,
+        plan: context.basePlan,
+        interests: context.interests,
+        recentQuotes: context.recentQuotes,
+        profile: context.profile,
+        aiConfig: context.aiConfig,
+        userId
     });
     const winner = chooseWinner(candidates);
     const generationTrace = JSON.stringify({
         promptVersion: PROMPT_VERSION,
+        date: today,
+        dayFlavor: context.basePlan.dayFlavor,
         selectedLane: winner.plan.lane,
         selectedScore: winner.score,
+        selectedJudge: winner.judge,
+        finalScore: winner.finalScore,
+        judgeModel: winner.judge ? context.aiConfig.judgeModel : null,
+        profile: context.profile
+            ? {
+                ratingsCount: context.profile.ratingsCount,
+                upCount: context.profile.upCount,
+                downCount: context.profile.downCount,
+                updatedAt: context.profile.updatedAt
+            }
+            : null,
         candidates: candidates.map((candidate) => ({
             lane: candidate.plan.lane,
             model: candidate.sourceModel,
             score: candidate.score.score,
+            judge: candidate.judge?.score ?? null,
+            finalScore: candidate.finalScore,
             reasons: candidate.score.reasons
         }))
     });
@@ -605,6 +731,8 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
             content: winner.candidate.content,
             author: winner.candidate.author,
             explanation: winner.candidate.explanation,
+            headline: winner.candidate.headline,
+            microAction: winner.candidate.microAction,
             category: winner.candidate.category,
             concepts: conceptsStr,
             sourceModel: winner.sourceModel,
@@ -618,8 +746,8 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
             actionType: winner.plan.actionType,
             difficulty: winner.plan.difficulty,
             promptVersion: PROMPT_VERSION,
-            provider: openai ? "openai" : "offline",
-            noveltyScore: winner.score.score,
+            provider: isOpenAIConfigured() ? "openai" : "offline",
+            noveltyScore: winner.finalScore,
             generationTrace
         }
     });
@@ -643,10 +771,12 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
             });
 
             if (winnerView) {
+                const userRating = await loadUserVerdict(userId, winnerView.quoteId);
                 return {
                     ...winnerView.quote,
                     isNew: false,
-                    isLiked: false
+                    isLiked: userRating === "up",
+                    userRating
                 };
             }
         }
@@ -654,9 +784,5 @@ export async function getDailyQuote(userId: string, forcedDate?: string) {
         logger.error("[QuoteService] Error creating dailyView:", error);
     }
 
-    const rating = await prisma.rating.findFirst({
-        where: { userId, quoteId: quote.id }
-    });
-
-    return { ...quote, isNew: true, isLiked: !!rating };
+    return { ...quote, isNew: true, isLiked: false, userRating: null as RatingVerdict | null };
 }

@@ -41,3 +41,10 @@ prisma/*.db
 
 # Environment template is tracked, actual env is not
 !.env.example
+
+# Deployment credentials and local database backups (never commit)
+.codex-deploy/
+DB-BACKUPS/
+*.db
+*.db-journal
+!prisma/migrations/**

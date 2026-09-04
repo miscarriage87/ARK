@@ -340,3 +340,27 @@ dArk can be considered meaningfully improved when:
 - prompts are versioned and previewed through the same production path,
 - CI catches repetition regressions before deployment,
 - production logs do not expose private prompt/user preference data.
+
+## Second Pass (2026-09-04): Feedback Loop, Clarity and Engagement Tracking
+
+Implemented:
+
+- Calendar leaves now carry a `headline`, a plain-language `explanation` and a concrete `microAction` for today.
+  The master prompt (`ark-variety-v2`) puts "sofort verständlich" and "Wirkung" before variety rules and adds a
+  weekday flavour so Mondays and Sundays read differently.
+- An editorial judge (small model, Structured Outputs) scores every candidate on clarity, impact and fit and is
+  blended with the local novelty score; the local scorer gained readability and impact heuristics.
+- Users rate each leaf once (thumbs up/down). Ratings build a persisted taste profile (axis statistics plus an LLM
+  summary with writing guidance) that biases the daily plan, the prompt and the scoring without collapsing variety.
+- `DailyView` tracks `firstOpenedAt`, `revealedAt` and `openCount`, so pregenerated leaves can be distinguished from
+  leaves the user actually opened and tore off. The admin view and the archive expose this.
+- Admin sessions are signed (HMAC) instead of "any cookie value passes"; login and cron key comparisons are
+  constant-time; `/api/quote/daily` no longer creates anonymous users.
+- Vitest unit tests cover the planner, the scorer, the taste profile and the admin session tokens; CI runs
+  lint, typecheck, tests, migration drift check and build. `scripts/deploy.sh` reproduces the Plesk deployment.
+
+Still open:
+
+- Embedding-based semantic similarity.
+- `scripts/eval-variety.ts` for 30-day dry runs.
+- Admin heatmaps for rolling repetition analysis.

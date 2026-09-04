@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 import AdminDashboardUI from "./AdminDashboardUI";
 import {
     CATEGORY_STYLE_GUIDE,
@@ -11,8 +11,7 @@ import {
 import { APP_VERSION } from "@/lib/constants";
 
 export default async function AdminDashboard() {
-    const cookieStore = await cookies();
-    if (!cookieStore.get("admin_session")) {
+    if (!(await isAdminAuthenticated())) {
         redirect("/admin");
     }
 

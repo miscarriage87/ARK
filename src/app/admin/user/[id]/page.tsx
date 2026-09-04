@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Lock, Unlock, ArrowLeft, Sparkles, Database } from "lucide-react";
+import { Save, Lock, Unlock, ArrowLeft, Sparkles, Database, Brain, ThumbsUp, ThumbsDown, Eye } from "lucide-react";
 import { INTERESTS, MAX_INTERESTS } from "@/lib/constants";
 import { safeJsonParse } from "@/lib/utils";
+import { AXIS_LABELS, parseTasteProfile, strongestPreferences, verdictFromScore, type RatingVerdict } from "@/lib/taste-profile";
 
 type AdminConcept = {
     word?: string;
@@ -15,6 +16,8 @@ type AdminQuote = {
     content: string;
     author: string | null;
     explanation: string | null;
+    headline: string | null;
+    microAction: string | null;
     category: string | null;
     sourceModel: string | null;
     concepts: string | null;
@@ -36,14 +39,27 @@ type AdminQuote = {
 type AdminView = {
     id: number;
     date: string;
+    firstOpenedAt: string | null;
+    revealedAt: string | null;
+    openCount: number;
     quote: AdminQuote;
+};
+
+type AdminRating = {
+    id: number;
+    quoteId: number;
+    score: number;
+    createdAt: string;
 };
 
 type AdminUser = {
     id: string;
     name: string;
     preferences: string | null;
+    tasteProfile: string | null;
+    tasteProfileUpdatedAt: string | null;
     views: AdminView[];
+    ratings: AdminRating[];
 };
 
 type UserPreferences = {
@@ -64,10 +80,20 @@ type GenerationCandidateTrace = {
     reasons?: string[];
 };
 
+type GenerationJudgeTrace = {
+    clarity?: number;
+    impact?: number;
+    fit?: number;
+    score?: number;
+    comment?: string;
+};
+
 type GenerationTrace = {
     promptVersion?: string;
     selectedLane?: string;
     selectedScore?: GenerationScore;
+    selectedJudge?: GenerationJudgeTrace | null;
+    finalScore?: number;
     candidates?: GenerationCandidateTrace[];
 };
 
@@ -100,6 +126,105 @@ function parseConcepts(concepts: string | null): AdminConcept[] {
         && "word" in concept
         && isNonEmptyString((concept as AdminConcept).word)
     ));
+}
+
+function formatTimestamp(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+}
+
+function TasteProfileCard({ user }: { user: AdminUser }) {
+    const profile = parseTasteProfile(user.tasteProfile);
+    const upCount = user.ratings.filter((rating) => verdictFromScore(rating.score) === "up").length;
+    const downCount = user.ratings.length - upCount;
+    const liked = strongestPreferences(profile, "up", 6);
+    const disliked = strongestPreferences(profile, "down", 6);
+
+    return (
+        <section className="bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-amber-300">
+                <Brain size={18} /> Taste Profile
+            </h3>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+                <MetaBadge label="ratings" className="border-white/10 bg-black/40 font-mono text-gray-200">{user.ratings.length}</MetaBadge>
+                <MetaBadge className="border-amber-500/20 bg-amber-500/10 text-amber-200">
+                    <span className="inline-flex items-center gap-1"><ThumbsUp size={11} /> {upCount}</span>
+                </MetaBadge>
+                <MetaBadge className="border-gray-500/20 bg-gray-500/10 text-gray-300">
+                    <span className="inline-flex items-center gap-1"><ThumbsDown size={11} /> {downCount}</span>
+                </MetaBadge>
+                <MetaBadge label="updated" className="border-white/10 bg-white/5 font-mono text-gray-400">
+                    {formatTimestamp(user.tasteProfileUpdatedAt) ?? "nie"}
+                </MetaBadge>
+                {profile?.summary?.model && (
+                    <MetaBadge label="model" className="border-cyan-500/20 bg-cyan-500/10 font-mono text-cyan-200">{profile.summary.model}</MetaBadge>
+                )}
+            </div>
+
+            {!profile ? (
+                <p className="text-xs text-gray-500">
+                    Noch kein Profil. Es entsteht automatisch mit der ersten Bewertung und wird bei jeder Generierung genutzt.
+                </p>
+            ) : (
+                <div className="flex flex-col gap-4 text-sm">
+                    {profile.summary ? (
+                        <>
+                            <div>
+                                <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Zusammenfassung</div>
+                                <p className="text-gray-200 leading-relaxed">{profile.summary.summary}</p>
+                            </div>
+                            <div>
+                                <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Schreibregeln</div>
+                                <p className="text-gray-300 leading-relaxed">{profile.summary.guidance}</p>
+                            </div>
+                            {(profile.summary.preferPatterns.length > 0 || profile.summary.avoidPatterns.length > 0) && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {profile.summary.preferPatterns.map((pattern) => (
+                                        <span key={`prefer-${pattern}`} className="rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">+ {pattern}</span>
+                                    ))}
+                                    {profile.summary.avoidPatterns.map((pattern) => (
+                                        <span key={`avoid-${pattern}`} className="rounded bg-red-500/10 px-2 py-1 text-[11px] text-red-200">- {pattern}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <p className="text-xs text-gray-500">
+                            Statistik-Profil ohne KI-Zusammenfassung (ab 3 Bewertungen wird zusammengefasst).
+                        </p>
+                    )}
+
+                    {liked.length > 0 && (
+                        <div>
+                            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Kommt gut an</div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {liked.map((item) => (
+                                    <MetaBadge key={`${item.axis}-${item.value}`} label={AXIS_LABELS[item.axis]} className="border-green-500/20 bg-green-500/10 text-green-200">
+                                        {item.value} ({item.up}/{item.down})
+                                    </MetaBadge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {disliked.length > 0 && (
+                        <div>
+                            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Kommt nicht an</div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {disliked.map((item) => (
+                                    <MetaBadge key={`${item.axis}-${item.value}`} label={AXIS_LABELS[item.axis]} className="border-red-500/20 bg-red-500/10 text-red-200">
+                                        {item.value} ({item.up}/{item.down})
+                                    </MetaBadge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </section>
+    );
 }
 
 function MetaBadge({
@@ -268,6 +393,8 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                         </div>
                         <p className="text-xs text-gray-500 mt-4">Selected: {interests.length} / {MAX_INTERESTS}</p>
                     </section>
+
+                    {user && <TasteProfileCard user={user} />}
                 </div>
 
                 {/* RIGHT COLUMN: DATABASE VIEW */}
@@ -279,10 +406,11 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="min-w-[1180px] w-full text-left text-sm text-gray-400">
+                        <table className="min-w-[1320px] w-full text-left text-sm text-gray-400">
                             <thead className="bg-black/40 text-gray-300 font-bold uppercase text-xs">
                                 <tr>
                                     <th className="p-4">Date</th>
+                                    <th className="p-4">Engagement</th>
                                     <th className="p-4">Engine</th>
                                     <th className="p-4">Plan</th>
                                     <th className="p-4">Content</th>
@@ -294,7 +422,12 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                     const trace = parseGenerationTrace(view.quote.generationTrace);
                                     const concepts = parseConcepts(view.quote.concepts);
                                     const selectedScore = trace?.selectedScore;
-                                    const score = formatEngineNumber(selectedScore?.score ?? view.quote.noveltyScore);
+                                    const score = formatEngineNumber(trace?.finalScore ?? selectedScore?.score ?? view.quote.noveltyScore);
+                                    const judge = trace?.selectedJudge ?? null;
+                                    const verdict: RatingVerdict | null = (() => {
+                                        const rating = user.ratings.find((item) => item.quoteId === view.quote.id);
+                                        return rating ? verdictFromScore(rating.score) : null;
+                                    })();
                                     const semanticNovelty = formatEngineNumber(selectedScore?.semanticNovelty);
                                     const maxSimilarity = formatEngineNumber(selectedScore?.maxSimilarity);
                                     const candidates = trace?.candidates || [];
@@ -303,6 +436,37 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                     return (
                                         <tr key={view.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="p-4 font-mono text-xs whitespace-nowrap align-top text-gray-500">{view.date}</td>
+                                            <td className="p-4 align-top w-44">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {view.revealedAt ? (
+                                                        <MetaBadge className="border-green-500/20 bg-green-500/10 text-green-200">
+                                                            <span className="inline-flex items-center gap-1"><Eye size={11} /> gelesen</span>
+                                                        </MetaBadge>
+                                                    ) : view.firstOpenedAt ? (
+                                                        <MetaBadge className="border-sky-500/20 bg-sky-500/10 text-sky-200">
+                                                            <span className="inline-flex items-center gap-1"><Eye size={11} /> geöffnet</span>
+                                                        </MetaBadge>
+                                                    ) : (
+                                                        <MetaBadge className="border-white/10 bg-white/5 text-gray-500">nicht geöffnet</MetaBadge>
+                                                    )}
+                                                    {view.openCount > 0 && (
+                                                        <MetaBadge label="opens" className="border-white/10 bg-black/40 font-mono text-gray-300">{view.openCount}</MetaBadge>
+                                                    )}
+                                                    {verdict === "up" && (
+                                                        <MetaBadge className="border-amber-500/20 bg-amber-500/10 text-amber-200">
+                                                            <span className="inline-flex items-center gap-1"><ThumbsUp size={11} /> gut</span>
+                                                        </MetaBadge>
+                                                    )}
+                                                    {verdict === "down" && (
+                                                        <MetaBadge className="border-gray-500/20 bg-gray-500/10 text-gray-300">
+                                                            <span className="inline-flex items-center gap-1"><ThumbsDown size={11} /> schlecht</span>
+                                                        </MetaBadge>
+                                                    )}
+                                                </div>
+                                                {formatTimestamp(view.revealedAt ?? view.firstOpenedAt) && (
+                                                    <div className="mt-2 text-[10px] font-mono text-gray-600">{formatTimestamp(view.revealedAt ?? view.firstOpenedAt)}</div>
+                                                )}
+                                            </td>
                                             <td className="p-4 align-top w-56">
                                                 <div className="flex flex-wrap gap-1.5">
                                                     <MetaBadge className="border-white/10 bg-black/40 font-mono text-gray-200">
@@ -362,6 +526,9 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                                 </div>
                                             </td>
                                             <td className="p-4 text-white align-top max-w-lg">
+                                                {view.quote.headline && (
+                                                    <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300 mb-1">{view.quote.headline}</div>
+                                                )}
                                                 <div className="serif text-base leading-relaxed text-gray-200 mb-2">
                                                     &ldquo;{view.quote.content}&rdquo;
                                                 </div>
@@ -375,6 +542,12 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                                         {view.quote.explanation}
                                                     </div>
                                                 )}
+                                                {view.quote.microAction && (
+                                                    <div className="mt-2 text-[11px] text-amber-200/80">
+                                                        <span className="uppercase tracking-wider text-[9px] text-amber-400 mr-1">Heute</span>
+                                                        {view.quote.microAction}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="p-4 align-top text-xs font-mono text-gray-500">
                                                 <div className="flex flex-col gap-3">
@@ -385,7 +558,15 @@ export default function UserAdminPage({ params }: { params: Promise<{ id: string
                                                         <MetaBadge label="similarity" className="border-red-500/20 bg-red-500/10 text-red-200">
                                                             {maxSimilarity}
                                                         </MetaBadge>
+                                                        {judge && (
+                                                            <MetaBadge label="judge" className="border-violet-500/20 bg-violet-500/10 text-violet-200">
+                                                                {formatEngineNumber(judge.clarity, 0)}/{formatEngineNumber(judge.impact, 0)}/{formatEngineNumber(judge.fit, 0)}
+                                                            </MetaBadge>
+                                                        )}
                                                     </div>
+                                                    {judge?.comment && (
+                                                        <div className="text-[10px] text-gray-500 italic">{judge.comment}</div>
+                                                    )}
 
                                                     {candidates.length > 0 && (
                                                         <div className="space-y-1">

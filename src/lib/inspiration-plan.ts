@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { FALLBACK_INTERESTS, type AIMode } from "./constants";
+import type { PlanPreferences } from "./taste-profile";
 
 export type ModeWeights = {
     quote: number;
@@ -20,6 +21,8 @@ export type InspirationPlan = {
     actionType: string;
     difficulty: string;
     lane: string;
+    /** Weekday colouring for the prompt, derived deterministically from the date. */
+    dayFlavor: string;
 };
 
 export type RecentInspirationSignal = Partial<InspirationPlan>;
@@ -118,6 +121,20 @@ export const VARIETY_AXES = {
     ]
 } as const;
 
+/** How the day of the week colours the leaf (Sunday = 0). */
+export const DAY_FLAVORS: readonly string[] = [
+    "Sonntag: ruhig, weit, Rückblick und Ausblick, keine To-do-Energie",
+    "Montag: Auftakt, klare Richtung, ein erster kleiner Schritt",
+    "Dienstag: Handwerk, Dranbleiben, das Unspektakuläre ernst nehmen",
+    "Mittwoch: Mitte der Woche, Perspektivwechsel, Kurskorrektur",
+    "Donnerstag: Mut, das Unbequeme angehen, eine Entscheidung treffen",
+    "Freitag: Ballast abwerfen, Ernte, Dankbarkeit ohne Kitsch",
+    "Samstag: Spiel, Neugier, Körper und Sinne, Zeit haben"
+];
+
+/** Strength of the learned taste bias in "recency days" (a +1 preference behaves like 8 extra days of freshness). */
+const PREFERENCE_WEIGHT = 8;
+
 type Rng = () => number;
 
 function hashToInt(input: string): number {
@@ -133,6 +150,32 @@ function createRng(seed: string): Rng {
         t = Math.imul(t ^ (t >>> 15), t | 1);
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+export function dayFlavorForDate(date: string): string {
+    const parsed = new Date(`${date}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return DAY_FLAVORS[1];
+    return DAY_FLAVORS[parsed.getUTCDay()] ?? DAY_FLAVORS[1];
+}
+
+function preferenceFor(preferences: PlanPreferences | undefined, key: keyof InspirationPlan, value: string): number {
+    const axis = preferences?.[key as keyof PlanPreferences];
+    const score = axis?.[value];
+    return typeof score === "number" && Number.isFinite(score) ? Math.max(-1, Math.min(1, score)) : 0;
+}
+
+export function applyModePreferences(weights: ModeWeights, preferences?: PlanPreferences): ModeWeights {
+    const adjust = (weight: number, mode: AIMode) => {
+        const base = Math.max(0, weight || 0);
+        const factor = 1 + 0.6 * preferenceFor(preferences, "mode", mode);
+        return Number((base * Math.max(0.2, factor)).toFixed(3));
+    };
+
+    return {
+        quote: adjust(weights.quote, "QUOTE"),
+        question: adjust(weights.question, "QUESTION"),
+        pulse: adjust(weights.pulse, "PULSE")
     };
 }
 
@@ -166,16 +209,22 @@ function countRecentMatches(
     }, 0);
 }
 
+/**
+ * Picks the value that was used least recently, nudged by learned preferences:
+ * liked values behave as if they were fresher, disliked values as if they were just used.
+ * Variety still wins: a disliked value returns once every alternative is more stale.
+ */
 function pickLeastRecent(
     values: readonly string[],
     recentSignals: RecentInspirationSignal[],
     key: keyof InspirationPlan,
-    rng: Rng
+    rng: Rng,
+    preferences?: PlanPreferences
 ): string {
     const ranked = values
         .map((value) => ({
             value,
-            penalty: countRecentMatches(recentSignals, key, value),
+            penalty: countRecentMatches(recentSignals, key, value) - PREFERENCE_WEIGHT * preferenceFor(preferences, key, value),
             tieBreaker: rng()
         }))
         .sort((a, b) => a.penalty - b.penalty || a.tieBreaker - b.tieBreaker);
@@ -206,31 +255,34 @@ export function buildInspirationPlan(input: {
     interests: string[];
     modeWeights: ModeWeights;
     recentSignals?: RecentInspirationSignal[];
+    preferences?: PlanPreferences;
 }): InspirationPlan {
     const seed = `${input.userId}:${input.date}:ark-variety-v1`;
     const rng = createRng(seed);
     const recentSignals = input.recentSignals || [];
+    const preferences = input.preferences;
     const interests = input.interests.length > 0 ? input.interests : [...FALLBACK_INTERESTS];
 
-    const mode = chooseWeightedMode(input.modeWeights, rng);
+    const mode = chooseWeightedMode(applyModePreferences(input.modeWeights, preferences), rng);
     const format = withModeAlignedFormat(
         mode,
-        pickLeastRecent(VARIETY_AXES.formats, recentSignals, "format", rng)
+        pickLeastRecent(VARIETY_AXES.formats, recentSignals, "format", rng, preferences)
     );
 
     return {
         seed,
         mode,
-        category: pickLeastRecent(interests, recentSignals, "category", rng),
+        category: pickLeastRecent(interests, recentSignals, "category", rng, preferences),
         format,
-        perspective: pickLeastRecent(VARIETY_AXES.perspectives, recentSignals, "perspective", rng),
-        tone: pickLeastRecent(VARIETY_AXES.tones, recentSignals, "tone", rng),
-        imageryWorld: pickLeastRecent(VARIETY_AXES.imageryWorlds, recentSignals, "imageryWorld", rng),
-        rhetoricalDevice: pickLeastRecent(VARIETY_AXES.rhetoricalDevices, recentSignals, "rhetoricalDevice", rng),
-        timeHorizon: pickLeastRecent(VARIETY_AXES.timeHorizons, recentSignals, "timeHorizon", rng),
-        actionType: pickLeastRecent(VARIETY_AXES.actionTypes, recentSignals, "actionType", rng),
-        difficulty: pickLeastRecent(VARIETY_AXES.difficulties, recentSignals, "difficulty", rng),
-        lane: pickLeastRecent(VARIETY_AXES.lanes, recentSignals, "lane", rng)
+        perspective: pickLeastRecent(VARIETY_AXES.perspectives, recentSignals, "perspective", rng, preferences),
+        tone: pickLeastRecent(VARIETY_AXES.tones, recentSignals, "tone", rng, preferences),
+        imageryWorld: pickLeastRecent(VARIETY_AXES.imageryWorlds, recentSignals, "imageryWorld", rng, preferences),
+        rhetoricalDevice: pickLeastRecent(VARIETY_AXES.rhetoricalDevices, recentSignals, "rhetoricalDevice", rng, preferences),
+        timeHorizon: pickLeastRecent(VARIETY_AXES.timeHorizons, recentSignals, "timeHorizon", rng, preferences),
+        actionType: pickLeastRecent(VARIETY_AXES.actionTypes, recentSignals, "actionType", rng, preferences),
+        difficulty: pickLeastRecent(VARIETY_AXES.difficulties, recentSignals, "difficulty", rng, preferences),
+        lane: pickLeastRecent(VARIETY_AXES.lanes, recentSignals, "lane", rng),
+        dayFlavor: dayFlavorForDate(input.date)
     };
 }
 

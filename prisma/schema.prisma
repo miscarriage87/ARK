@@ -16,7 +16,11 @@ model User {
   onboardingCompleted Boolean @default(false)
   preferences         String? // JSON string
   aiConfig            String? // JSON string for Admin overrides { temp, weights, prompt }
-  
+
+  // Learned taste profile (JSON) derived from good/bad ratings, see src/lib/taste-profile.ts
+  tasteProfile          String?
+  tasteProfileUpdatedAt DateTime?
+
   views     DailyView[]
   ratings   Rating[]
   shares    Share[]
@@ -27,6 +31,8 @@ model Quote {
   content     String
   author      String?
   explanation String?
+  headline    String?  // 2-5 word title printed on the calendar leaf
+  microAction String?  // One concrete, small step for today
   category    String?  // The "Tag" or "Topic"
   tags        String?  // Comma separated
   concepts    String?  // JSON string of { word: definition }
@@ -61,9 +67,14 @@ model DailyView {
   id        Int      @id @default(autoincrement())
   userId    String
   quoteId   Int
-  viewedAt  DateTime @default(now())
+  viewedAt  DateTime @default(now()) // Row creation time (may be a pregeneration, not a real view)
 
   date      String   // "YYYY-MM-DD"
+
+  // Real engagement tracking: set only when the user actually opens / tears off the leaf
+  firstOpenedAt DateTime?
+  revealedAt    DateTime?
+  openCount     Int       @default(0)
 
   user      User     @relation(fields: [userId], references: [id])
   quote     Quote    @relation(fields: [quoteId], references: [id])
@@ -79,10 +90,11 @@ model Rating {
   user      User     @relation(fields: [userId], references: [id])
   quoteId   Int
   quote     Quote    @relation(fields: [quoteId], references: [id])
-  score     Int
+  score     Int      // 5 = "gut" (thumbs up), 1 = "schlecht" (thumbs down)
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([quoteId])
   @@unique([userId, quoteId])
 }
 

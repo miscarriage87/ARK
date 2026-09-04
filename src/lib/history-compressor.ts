@@ -5,6 +5,9 @@ type ConceptEntry = {
     word?: string;
 };
 
+/** Mode labels used as "author"; banning them would be meaningless. */
+const GENERIC_AUTHORS = new Set(["Unbekannt", "Unknown", "Einsicht", "Reflexion", "Impuls"]);
+
 export class HistoryCompressor {
     /**
      * Generates a compressed "Blocklist" string for the AI.
@@ -47,7 +50,7 @@ export class HistoryCompressor {
             // Authors: Just keep adding to the Set. 
             // Since we iterate from newest to oldest, the Set naturally prioritizes recent ones found first? 
             // No, Set doesn't care. But we want the "Last 40 UNIQUE authors".
-            if (q.author && q.author !== "Unbekannt" && q.author !== "Reflexion" && q.author !== "Impuls") {
+            if (q.author && !GENERIC_AUTHORS.has(q.author)) {
                 seenAuthors.add(q.author);
             }
 
@@ -85,7 +88,7 @@ export class HistoryCompressor {
 
         for (const h of history) {
             const a = h.quote.author;
-            if (a && a !== "Unbekannt" && !authorSet.has(a) && a !== "Reflexion" && a !== "Impuls") {
+            if (a && !GENERIC_AUTHORS.has(a) && !authorSet.has(a)) {
                 authorSet.add(a);
                 authorList.push(a);
             }

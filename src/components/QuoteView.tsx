@@ -7,7 +7,9 @@ import BackgroundGlow from "@/components/BackgroundGlow";
 import IntroSequence from "@/components/ui/IntroSequence";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import { useEffect, useState, useCallback } from "react";
-import { fetchDailyQuoteAction } from "@/app/actions";
+import { fetchDailyQuoteAction, revealDailyQuoteAction } from "@/app/actions";
+import { formatLocalDate } from "@/lib/utils";
+import type { RatingVerdict } from "@/lib/taste-profile";
 import { motion } from "framer-motion";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
@@ -27,10 +29,13 @@ type QuoteData = {
     content: string;
     author: string | null;
     explanation: string | null;
+    headline: string | null;
+    microAction: string | null;
     category: string | null;
     concepts: string | null;
     isNew: boolean;
     isLiked: boolean;
+    userRating: RatingVerdict | null;
 };
 
 // --- Pregeneration Schutz via SessionStorage (pro User) ---
@@ -41,15 +46,13 @@ function hasTriggeredToday(userId: string): boolean {
     const key = PREGENERATE_KEY_PREFIX + userId;
     const stored = sessionStorage.getItem(key);
     if (!stored) return false;
-    const today = new Date().toISOString().split("T")[0];
-    return stored === today;
+    return stored === formatLocalDate();
 }
 
 function markAsTriggered(userId: string): void {
     if (typeof window === "undefined") return;
     const key = PREGENERATE_KEY_PREFIX + userId;
-    const today = new Date().toISOString().split("T")[0];
-    sessionStorage.setItem(key, today);
+    sessionStorage.setItem(key, formatLocalDate());
 }
 
 /**
@@ -60,7 +63,6 @@ function markAsTriggered(userId: string): void {
 function triggerPregeneration(userId: string) {
     // Bereits heute für diesen User getriggert? Abbrechen.
     if (hasTriggeredToday(userId)) {
-        console.log("[Pregenerate] Bereits heute für diesen User getriggert, überspringe.");
         return;
     }
 
@@ -71,8 +73,6 @@ function triggerPregeneration(userId: string) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
-    }).then(() => {
-        console.log("[Pregenerate] Vorgenerierung für morgen gestartet.");
     }).catch(() => {
         // Bei Fehler: Markierung entfernen für Retry
         const key = PREGENERATE_KEY_PREFIX + userId;
@@ -189,7 +189,12 @@ export default function QuoteView({ user }: QuoteViewProps) {
 
                 <AnimatedPageContainer>
                     {data ? (
-                        <CalendarLeaf quote={data.quote} dateStr={data.date} userId={user.id} />
+                        <CalendarLeaf
+                            quote={data.quote}
+                            dateStr={data.date}
+                            userId={user.id}
+                            onReveal={() => { void revealDailyQuoteAction(user.id, data.quote.id); }}
+                        />
                     ) : error ? (
                         <div className="flex-1 flex items-center justify-center min-h-[50vh]">
                             <ErrorState />

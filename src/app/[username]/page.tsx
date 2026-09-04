@@ -3,7 +3,7 @@ import Onboarding from "@/components/Onboarding";
 import { Metadata } from "next";
 import QuoteView from "@/components/QuoteView";
 import { notFound } from "next/navigation";
-import { safeJsonParse } from "@/lib/utils";
+import { logger, safeJsonParse } from "@/lib/utils";
 
 type Props = {
     params: Promise<{ username: string }>;
@@ -18,8 +18,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export const dynamic = 'force-dynamic';
 
-// ... imports
-
 export default async function UserPage({ params }: Props) {
     const { username } = await params;
     const decodedName = decodeURIComponent(username);
@@ -30,7 +28,7 @@ export default async function UserPage({ params }: Props) {
         return notFound();
     }
 
-    console.log(`[UserPage] Loading for: ${decodedName}`);
+    logger.debug(`[UserPage] Loading for: ${decodedName}`);
 
     // 1. Try to find user by Name
     const user = await prisma.user.findUnique({
