@@ -1,26 +1,30 @@
-# DEV NOTES - Antigravity Tool
+# DEV NOTES - dArk (Antigravity)
 
 ## Tech Stack
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Database**: SQLite with Prisma
-- **AI**: OpenAI API
-- **Styling**: CSS Modules + Global CSS Variables (No Tailwind)
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript
+- **Database**: SQLite with Prisma (WAL mode)
+- **AI**: OpenAI Chat Completions with Structured Outputs (candidate generation, editorial judge, taste summary)
+- **Styling**: CSS Modules + global CSS variables; Tailwind utilities are available for admin/marketing pages
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
+- **Tests**: Vitest (`npm test`)
 
 ## Data Model
-- **User**: Stores minimal profile and JSON preferences.
-- **Quote**: Stores generated quotes. Quotes are generated on demand or pre-fetched.
-- **DailyView**: Tracks what a user saw on a specific day to ensure history references work.
+- **User**: minimal profile, JSON `preferences` (interests), optional admin `aiConfig`, learned `tasteProfile` (JSON).
+- **Quote**: generated leaf with `headline`, `content`, `explanation`, `microAction`, concepts and variety metadata.
+- **DailyView**: one row per user and day (unique). `firstOpenedAt`, `revealedAt` and `openCount` record real engagement;
+  `viewedAt` is only the row creation time (often a pregeneration).
+- **Rating**: one verdict per user and quote, `score` 5 = "gut", 1 = "schlecht".
 
 ## Key Decisions
-- **Onboarding**: A multi-step wizard stores preferences in `localStorage` until completion, then syncs to DB.
-- **Quote Generation**: 
-    - Daily trigger or User request?
-    - **Decision**: On visit. If no quote exists for User+Date in `DailyView`, generate one or fetch a relevant pre-generated one.
-- **PWA**: Using `next-pwa` (or manual manifest configuration) for installability.
+- **Onboarding**: the wizard posts name + interests to `/api/quote/daily`, which sets the `ark_user_id` cookie.
+  The server action that loads today's leaf also (re)sets that cookie so new devices can rate and pregenerate.
+- **Quote generation**: plan (deterministic per user/date, biased by the taste profile) -> 3 prompt lanes in parallel
+  -> local novelty/readability/impact scoring -> LLM judge -> winner stored with a full trace.
+- **Feedback loop**: every rating refreshes the taste profile in the background; the generator refreshes lazily when
+  ratings are newer than the profile.
+- **Timezone**: all day boundaries use `formatAppDate()` (`APP_TIME_ZONE`, default `Europe/Berlin`).
+- **PWA**: manual Next.js manifest (`src/app/manifest.ts`).
 
 ## Environment Variables
-- `DATABASE_URL="file:./dev.db"`
-- `OPENAI_API_KEY="..."`
+See `.env.example`. `CRON_API_KEY` is mandatory in production; `ADMIN_SESSION_SECRET` is optional.

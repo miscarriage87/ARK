@@ -3,6 +3,7 @@
  */
 
 import { Interest } from "./constants";
+import type { RatingVerdict } from "./taste-profile";
 
 // User Preferences (gespeichert als JSON in DB)
 export interface UserPreferences {
@@ -19,6 +20,11 @@ export interface AIConfig {
     };
     masterPrompt?: string;
     model?: string;
+    premiumModel?: string;
+    fallbackModel?: string;
+    judgeModel?: string;
+    profileModel?: string;
+    candidateCount?: number;
 }
 
 // Quote-Daten aus der Datenbank
@@ -27,9 +33,24 @@ export interface Quote {
     content: string;
     author: string | null;
     explanation: string | null;
+    headline: string | null;
+    microAction: string | null;
     category: string | null;
     tags: string | null;
     concepts: string | null;
+    mode: string | null;
+    format: string | null;
+    perspective: string | null;
+    tone: string | null;
+    imageryWorld: string | null;
+    rhetoricalDevice: string | null;
+    timeHorizon: string | null;
+    actionType: string | null;
+    difficulty: string | null;
+    promptVersion: string | null;
+    provider: string | null;
+    noveltyScore: number | null;
+    generationTrace: string | null;
     generatedAt: Date;
     sourceModel: string | null;
 }
@@ -37,7 +58,10 @@ export interface Quote {
 // Quote-Daten mit zusätzlichen Runtime-Informationen
 export interface QuoteWithMeta extends Quote {
     isNew: boolean;
+    /** Kept for backwards compatibility: true when the user rated the leaf "gut". */
     isLiked: boolean;
+    /** The user's one-time verdict for this leaf, null when not rated yet. */
+    userRating: RatingVerdict | null;
 }
 
 // Concept-Definition (Teil von Quote.concepts JSON)
@@ -55,6 +79,8 @@ export interface User {
     onboardingCompleted: boolean;
     preferences: string | null;
     aiConfig: string | null;
+    tasteProfile: string | null;
+    tasteProfileUpdatedAt: Date | null;
 }
 
 // User mit geparsten Preferences für Client-Komponenten
@@ -74,10 +100,13 @@ export interface DailyView {
     quoteId: number;
     viewedAt: Date;
     date: string;
+    firstOpenedAt: Date | null;
+    revealedAt: Date | null;
+    openCount: number;
     quote?: Quote;
 }
 
-// Rating aus der Datenbank
+// Rating aus der Datenbank (score 5 = gut, 1 = schlecht)
 export interface Rating {
     id: number;
     userId: string;

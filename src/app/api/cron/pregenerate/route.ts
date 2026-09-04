@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
+import { addDays, formatAppDate, logger } from "@/lib/utils";
 
 /**
  * GET /api/cron/pregenerate
  *
- * Cron-Job Endpoint für tägliche Vorgenerierung.
- * Wird z.B. um 03:00 Uhr aufgerufen und generiert
- * Zitate für alle User, die noch kein Zitat für morgen haben.
- *
- * Optional mit API-Key gesichert über Query-Parameter oder Header.
- *
- * Wichtig: Antwortet sofort und führt Generierung im Hintergrund aus,
- * um Timeouts zu vermeiden.
+ * Daily pregeneration for all onboarded users without a leaf for tomorrow.
+ * Secured via CRON_API_KEY (header x-cron-key or query ?key=), required in production.
+ * Responds immediately and generates in the background to avoid scheduler timeouts.
  */
+function keysMatch(provided: string | null, expected: string): boolean {
+    if (!provided) return false;
+    const a = Buffer.from(provided, "utf8");
+    const b = Buffer.from(expected, "utf8");
+    return a.length === b.length && timingSafeEqual(a, b);
+}
 
-// Hintergrund-Generierung (wird nicht awaited)
 async function generateInBackground(users: { id: string; name: string }[], dateStr: string) {
     const startTime = Date.now();
     let successCount = 0;
@@ -23,57 +25,42 @@ async function generateInBackground(users: { id: string; name: string }[], dateS
 
     for (const user of users) {
         try {
-            console.log(`[Cron] Generiere für User ${user.name} (${user.id})`);
             await getDailyQuote(user.id, dateStr);
             successCount++;
         } catch (error) {
-            console.error(`[Cron] Fehler bei User ${user.id}:`, error);
+            logger.error(`[Cron] Generation failed for user ${user.id}:`, error);
             errorCount++;
         }
     }
 
-    const duration = Date.now() - startTime;
-    console.log(`[Cron] Abgeschlossen in ${duration}ms: ${successCount} generiert, ${errorCount} Fehler`);
+    logger.info(`[Cron] Finished ${dateStr} in ${Date.now() - startTime}ms: ${successCount} generated, ${errorCount} errors`);
 }
 
 export async function GET(req: NextRequest) {
-    // Optional: API-Key Validierung
     const apiKey = req.headers.get("x-cron-key") || req.nextUrl.searchParams.get("key");
     const expectedKey = process.env.CRON_API_KEY;
 
-    if (expectedKey && apiKey !== expectedKey) {
-        return NextResponse.json(
-            { error: "Unauthorized" },
-            { status: 401 }
-        );
+    if (process.env.NODE_ENV === "production" && !expectedKey) {
+        return NextResponse.json({ error: "CRON_API_KEY is required in production" }, { status: 500 });
+    }
+
+    if (expectedKey && !keysMatch(apiKey, expectedKey)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        // Berechne morgen
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        const tomorrowStr = formatAppDate(addDays(new Date(), 1));
 
-        console.log(`[Cron] Starte Vorgenerierung für ${tomorrowStr}`);
-
-        // Alle aktiven User ohne Zitat für morgen
         const usersWithoutTomorrow = await prisma.user.findMany({
             where: {
                 onboardingCompleted: true,
-                views: {
-                    none: {
-                        date: tomorrowStr
-                    }
-                }
+                views: { none: { date: tomorrowStr } }
             },
-            select: {
-                id: true,
-                name: true
-            }
+            select: { id: true, name: true }
         });
 
         const userCount = usersWithoutTomorrow.length;
-        console.log(`[Cron] ${userCount} User ohne Zitat für ${tomorrowStr}`);
+        logger.info(`[Cron] ${userCount} users without a leaf for ${tomorrowStr}`);
 
         if (userCount === 0) {
             return NextResponse.json({
@@ -84,22 +71,17 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Starte Generierung im Hintergrund (ohne await!)
-        generateInBackground(usersWithoutTomorrow, tomorrowStr);
+        // Fire-and-forget: the scheduler only needs the acknowledgement.
+        void generateInBackground(usersWithoutTomorrow, tomorrowStr);
 
-        // Antworte sofort
         return NextResponse.json({
             status: "started",
             message: `Generierung für ${userCount} User gestartet`,
             date: tomorrowStr,
             pending: userCount
         });
-
     } catch (error) {
-        console.error("[Cron] Kritischer Fehler:", error);
-        return NextResponse.json(
-            { error: "Cron-Job fehlgeschlagen" },
-            { status: 500 }
-        );
+        logger.error("[Cron] Fatal error:", error);
+        return NextResponse.json({ error: "Cron-Job fehlgeschlagen" }, { status: 500 });
     }
 }

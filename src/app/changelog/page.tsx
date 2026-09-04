@@ -9,6 +9,27 @@ export default function ChangelogPage() {
 
     const changes = [
         {
+            version: "v1.4",
+            date: "4. September 2026",
+            items: [
+                "Kalenderblätter mit Titel, klarem Kerngedanken, verständlicher Erklärung und einer konkreten Mini-Aktion für heute.",
+                "Daumen hoch oder runter: Jedes Blatt kann einmal bewertet werden. Aus den Bewertungen entsteht ein Geschmacksprofil, das die Blätter Schritt für Schritt an dich anpasst.",
+                "Ein zweites Modell wählt aus mehreren Kandidaten das verständlichste und wirkungsvollste Blatt aus; Wochentag-Färbung und Lernprofil sorgen für mehr Abwechslung.",
+                "Archiv zeigt Bewertungen und Titel; das Tragen (Öffnen und Abreißen) der Blätter wird jetzt nachvollziehbar erfasst.",
+                "Sicherheit: signierte Admin-Sitzungen, konstante Passwort-Vergleiche, Unit-Tests und ein reproduzierbares Deploy-Skript."
+            ]
+        },
+        {
+            version: "v1.3",
+            date: "16. Mai 2026",
+            items: [
+                "Neue Variety Engine mit Tagesplan, mehreren Kandidaten und Novelty-Scoring für deutlich abwechslungsreichere Kalenderblätter.",
+                "Archiv-Einträge speichern und zeigen jetzt Modell, Prompt-Version, Provider, Format, Ton, Bildwelt und weitere Generation-Metadaten.",
+                "Admin-Ansicht erweitert: pro Kalendereintrag sind Auswahl-Lane, Kandidatenbewertung und Engine-Spur sichtbar.",
+                "Sicherere API-Validierung, Cron-Schutz und aktualisierte Next.js-Abhängigkeiten."
+            ]
+        },
+        {
             version: "v1.2",
             date: "11. Januar 2026",
             items: [

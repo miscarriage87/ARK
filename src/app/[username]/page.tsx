@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import Onboarding from "@/components/Onboarding";
-import IntroSequence from "@/components/ui/IntroSequence";
 import { Metadata } from "next";
 import QuoteView from "@/components/QuoteView";
 import { notFound } from "next/navigation";
+import { logger, safeJsonParse } from "@/lib/utils";
 
 type Props = {
     params: Promise<{ username: string }>;
@@ -18,8 +18,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export const dynamic = 'force-dynamic';
 
-// ... imports
-
 export default async function UserPage({ params }: Props) {
     const { username } = await params;
     const decodedName = decodeURIComponent(username);
@@ -30,7 +28,7 @@ export default async function UserPage({ params }: Props) {
         return notFound();
     }
 
-    console.log(`[UserPage] Loading for: ${decodedName}`);
+    logger.debug(`[UserPage] Loading for: ${decodedName}`);
 
     // 1. Try to find user by Name
     const user = await prisma.user.findUnique({
@@ -55,13 +53,8 @@ export default async function UserPage({ params }: Props) {
 
     // 3. User exists -> Prepare Data for Suspended View
     // We need to parse 'interests' from the JSON preferences because QuoteView expects a strict array.
-    let interests: string[] = [];
-    if (user.preferences && typeof user.preferences === 'object' && !Array.isArray(user.preferences)) {
-        const prefs = user.preferences as any;
-        if (Array.isArray(prefs.interests)) {
-            interests = prefs.interests as string[];
-        }
-    }
+    const prefs = safeJsonParse<{ interests?: string[] }>(user.preferences, {});
+    const interests = Array.isArray(prefs.interests) ? prefs.interests : [];
 
     const cleanUser = {
         ...user,

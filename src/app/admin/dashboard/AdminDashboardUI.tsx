@@ -5,8 +5,16 @@ import { User, Database, Brain, Globe, BookOpen, Quote, ChevronDown, ChevronRigh
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
+type DashboardUser = {
+    id: string;
+    name: string;
+    views: Array<{
+        date: string;
+    }>;
+};
+
 type DashboardProps = {
-    users: any[];
+    users: DashboardUser[];
     systemContext: {
         masterPrompt: string;
         styleGuides: Record<string, string>;
@@ -168,7 +176,7 @@ export default function AdminDashboardUI({ users, systemContext, systemVersion }
     );
 }
 
-function CollapsibleSection({ id, title, icon, isOpen, onToggle, children }: { id: string, title: string, icon: React.ReactNode, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) {
+function CollapsibleSection({ title, icon, isOpen, onToggle, children }: { id: string, title: string, icon: React.ReactNode, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) {
     return (
         <section className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <button

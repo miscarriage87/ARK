@@ -5,6 +5,13 @@ import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 
 const TIMEOUT_SECONDS = 60;
+const STATUS_MESSAGES = [
+    "Verbinde mit Neuralem Netz",
+    "Analysiere Muster",
+    "Formuliere Erkenntnis",
+    "Verfeinere Nuancen",
+    "Finalisiere Ausgabe"
+];
 
 export default function LoadingScreen() {
     const [progress, setProgress] = useState(0);
@@ -13,14 +20,6 @@ export default function LoadingScreen() {
     const [isVisible, setIsVisible] = useState(false);
     const [elapsed, setElapsed] = useState(0);
     const [isTimedOut, setIsTimedOut] = useState(false);
-
-    const STATUS_MESSAGES = [
-        "Verbinde mit Neuralem Netz",
-        "Analysiere Muster",
-        "Formuliere Erkenntnis",
-        "Verfeinere Nuancen",
-        "Finalisiere Ausgabe"
-    ];
 
     // 1. Anti-Flash Grace Period
     // Only show the screen if loading takes longer than 800ms.

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { z } from "zod";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 
-// Validierungs-Schemas
+// Validation schemas
 const uuidSchema = z.string().uuid("Ungültige User-ID");
 
 const aiConfigSchema = z.object({
@@ -14,7 +14,12 @@ const aiConfigSchema = z.object({
         pulse: z.number().min(0).max(100)
     }).optional(),
     masterPrompt: z.string().max(10000).optional(),
-    model: z.string().max(50).optional()
+    model: z.string().max(50).optional(),
+    premiumModel: z.string().max(50).optional(),
+    fallbackModel: z.string().max(50).optional(),
+    judgeModel: z.string().max(50).optional(),
+    profileModel: z.string().max(50).optional(),
+    candidateCount: z.number().int().min(1).max(5).optional()
 }).optional();
 
 const preferencesSchema = z.object({
@@ -27,13 +32,12 @@ const updateUserSchema = z.object({
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    if (!(await cookies()).get("admin_session")) {
+    if (!(await isAdminAuthenticated())) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
-    // Validiere UUID Format
     const idResult = uuidSchema.safeParse(id);
     if (!idResult.success) {
         return NextResponse.json({ error: "Ungültige User-ID" }, { status: 400 });
@@ -43,13 +47,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         where: { id },
         include: {
             views: {
-                take: 100, // Limit für Performance
+                take: 100,
                 include: { quote: true },
-                orderBy: { date: 'desc' }
+                orderBy: { date: "desc" }
             },
             ratings: {
-                take: 100, // Limit für Performance
-                include: { quote: true }
+                take: 200,
+                orderBy: { createdAt: "desc" },
+                select: { id: true, quoteId: true, score: true, createdAt: true }
             }
         }
     });
@@ -62,13 +67,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    if (!(await cookies()).get("admin_session")) {
+    if (!(await isAdminAuthenticated())) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
-    // Validiere UUID Format
     const idResult = uuidSchema.safeParse(id);
     if (!idResult.success) {
         return NextResponse.json({ error: "Ungültige User-ID" }, { status: 400 });
@@ -81,7 +85,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json({ error: "Ungültiges JSON" }, { status: 400 });
     }
 
-    // Validiere Request Body
     const bodyResult = updateUserSchema.safeParse(body);
     if (!bodyResult.success) {
         return NextResponse.json({
@@ -90,7 +93,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         }, { status: 400 });
     }
 
-    // Zusätzliche Validierung der JSON-Inhalte
     if (bodyResult.data.aiConfig) {
         try {
             const parsed = JSON.parse(bodyResult.data.aiConfig);
@@ -121,8 +123,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         }
     }
 
-    // User existiert?
-    const existingUser = await prisma.user.findUnique({ where: { id } });
+    const existingUser = await prisma.user.findUnique({ where: { id }, select: { id: true } });
     if (!existingUser) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
