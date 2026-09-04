@@ -178,6 +178,21 @@ APP_TIME_ZONE="Europe/Berlin"  # Optional
 
 ## Deployment (Plesk / Strato)
 
-- `scripts/deploy.sh [branch]` (default `main`): backs up `.env` + SQLite DB on the server, clones the branch into `releases/`, rsyncs into `httpdocs` (keeping `.env`, `node_modules`, `.next`, `tmp`, the DB), runs `npm ci`, `prisma migrate deploy`, `next build`, touches `tmp/restart.txt` (Passenger restart), prunes old releases, then health-checks the site
+The production host was rebuilt on 2026-09-01. The app now lives in the subscription home (`DEPLOY_BASE`, currently `/var/www/vhosts/dealradar.2pohl.de`, domain `dark.2pohl.de`) with a releases/shared layout; Apache proxies the domain to `127.0.0.1:$PORT` and there is no Passenger involved:
+
+```
+ark-shared/.env            secrets, PORT=3001, HOSTNAME=127.0.0.1, absolute DATABASE_URL (chmod 600, never in git)
+ark-shared/prod.db         SQLite database (restored from the 2026-05-16 backup, then migrated)
+ark-shared/backups/        .env + DB snapshots taken by every deploy
+ark-shared/logs/           app.log, watchdog.log, cron.log
+ark-shared/start.sh        runs `node server.js` for ark-current with the shared .env (Node 24)
+ark-shared/watchdog.sh     cron (* * * * *): starts the app when nothing listens on PORT
+ark-shared/restart.sh      kills the running app and calls watchdog.sh (used by deploys)
+ark-shared/pregenerate.sh  cron (5 3 * * *): calls /api/cron/pregenerate on 127.0.0.1 with CRON_API_KEY
+ark-releases/ark-<ts>/     git clone + node_modules + .next per release (last 3 kept)
+ark-current -> ark-releases/ark-<ts>
+```
+
+- `scripts/deploy.sh [branch]` (default `main`): backs up `.env` + DB, clones the branch into a new release, symlinks the shared `.env`, runs `npm ci`, `prisma migrate deploy`, `next build`, switches `ark-current`, restarts via `restart.sh`, waits for the port, prunes old releases and health-checks the public URL
 - Host settings are read from `.codex-deploy/deploy.env`; the SSH key lives in `.codex-deploy/` as well. Both are gitignored and must never be committed
-- The production cron calls `/api/cron/pregenerate?key=…` daily
+- Legacy directories `ark-app` (v1.2 source) and `ark-runtime` (standalone build, empty DB) from the 2026-09-04 manual restore are still present but unused

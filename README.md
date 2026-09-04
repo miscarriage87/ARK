@@ -149,7 +149,7 @@ DATABASE_URL=file:./ci.db npm run build # production build check
 
 ## Deployment
 
-Production runs on a Plesk host (Node 22, Passenger). `scripts/deploy.sh [branch]` clones the branch on the server, backs up `.env` and the SQLite database, syncs the release into `httpdocs`, runs `npm ci`, `prisma migrate deploy` and `next build`, then restarts Passenger. Host settings are read from `.codex-deploy/deploy.env`, which is gitignored together with the SSH key.
+Production runs on a Plesk host (Node 24) behind an Apache reverse proxy. `scripts/deploy.sh [branch]` clones the branch into a new release directory on the server, backs up `.env` and the SQLite database, runs `npm ci`, `prisma migrate deploy` and `next build`, switches the `ark-current` symlink and restarts the app; a cron watchdog keeps it running and a nightly cron triggers pregeneration. Host settings are read from `.codex-deploy/deploy.env`, which is gitignored together with the SSH key. See `CLAUDE.md` for the server layout.
 
 ## License
 

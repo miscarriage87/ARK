@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-// Custom HTTP server wrapper around Next.js (used as the Plesk/Passenger startup file).
+// Custom HTTP server wrapper around Next.js (started by ark-shared/start.sh on the production host).
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+// Bind to loopback by default: the reverse proxy (Apache/Plesk) talks to 127.0.0.1:$PORT.
+const hostname = process.env.HOSTNAME || '127.0.0.1';
 const port = Number(process.env.PORT) || 3000;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -26,7 +27,7 @@ app.prepare().then(() => {
             console.error(err);
             process.exit(1);
         })
-        .listen(port, () => {
+        .listen(port, hostname, () => {
             console.log(`> Ready on http://${hostname}:${port}`);
         });
 });
