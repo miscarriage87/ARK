@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getDailyQuote } from '../src/lib/ai-service';
-import { addDays, formatAppDate } from '../src/lib/utils';
+import { formatAppDate } from '../src/lib/utils';
 
 const prisma = new PrismaClient();
 
@@ -52,7 +52,7 @@ async function main() {
     for (const user of users) {
         console.log(`\n🤖 Generating history for ${user.name}...`);
         for (let i = 4; i >= 0; i--) {
-            const dateStr = formatAppDate(addDays(today, -i));
+            const dateStr = formatAppDate(today, -i);
 
             console.log(`   📅 ${dateStr} generating...`);
             try {

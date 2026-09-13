@@ -44,9 +44,14 @@ export function formatLocalDate(date: Date = new Date()): string {
 
 /**
  * Formats a date in the app's product timezone instead of UTC.
- * This keeps the daily calendar aligned with the user's expected local day.
+ * Optional offsets count calendar days in that timezone, independently of the
+ * server's timezone and 23/25-hour days at daylight-saving transitions.
  */
-export function formatAppDate(date: Date = new Date()): string {
+export function formatAppDate(date: Date = new Date(), dayOffset: number = 0): string {
+    if (!Number.isInteger(dayOffset)) {
+        throw new RangeError("dayOffset must be an integer");
+    }
+
     const timeZone = process.env.APP_TIME_ZONE || "Europe/Berlin";
     const parts = new Intl.DateTimeFormat("en-CA", {
         timeZone,
@@ -56,7 +61,16 @@ export function formatAppDate(date: Date = new Date()): string {
     }).formatToParts(date);
 
     const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-    return `${byType.year}-${byType.month}-${byType.day}`;
+    if (dayOffset === 0) return `${byType.year}-${byType.month}-${byType.day}`;
+
+    // These UTC fields represent a calendar date, not the original instant.
+    // UTC arithmetic then rolls months/years without applying host DST rules.
+    const calendarDate = new Date(0);
+    calendarDate.setUTCFullYear(Number(byType.year), Number(byType.month) - 1, Number(byType.day) + dayOffset);
+    const year = String(calendarDate.getUTCFullYear()).padStart(4, "0");
+    const month = String(calendarDate.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(calendarDate.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 export function addDays(date: Date, days: number): Date {

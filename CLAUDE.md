@@ -158,7 +158,7 @@ APP_TIME_ZONE="Europe/Berlin"  # Optional
 - **Client Components** (`"use client"`) for interactive UI (QuoteView, CalendarLeaf, Onboarding, overlays)
 - **JSON columns** in Prisma for `preferences`, `aiConfig`, `tasteProfile`, `generationTrace` — parsed with `safeJsonParse<T>()` / `parseTasteProfile()`
 - **Fire-and-forget** background work (cron generation, profile refresh) is logged, never awaited by the response
-- **Timezone**: always use `formatAppDate()` for day keys on the server and `formatLocalDate()` on the client; never `toISOString().split("T")[0]`
+- **Timezone**: always use `formatAppDate()` for day keys on the server and `formatLocalDate()` on the client; never `toISOString().split("T")[0]`. For adjacent app days, use `formatAppDate(now, dayOffset)` (for example `1` for tomorrow), so server timezone differences and daylight-saving transitions cannot skip or repeat a date.
 - **Logging**: use `logger` from `src/lib/utils.ts`; never log prompts, preferences or secrets
 - **PWA** support via `src/app/manifest.ts`; **custom server** (`server.js`) is the Passenger startup file
 
