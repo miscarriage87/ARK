@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
-import { addDays, formatAppDate, logger } from "@/lib/utils";
+import { formatAppDate, logger } from "@/lib/utils";
 
 /**
  * GET /api/cron/pregenerate
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const tomorrowStr = formatAppDate(addDays(new Date(), 1));
+        const tomorrowStr = formatAppDate(new Date(), 1);
 
         const usersWithoutTomorrow = await prisma.user.findMany({
             where: {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDailyQuote } from "@/lib/ai-service";
 import { cookies } from "next/headers";
-import { addDays, formatAppDate, isValidUUID, logger } from "@/lib/utils";
+import { formatAppDate, isValidUUID, logger } from "@/lib/utils";
 
 /**
  * POST /api/quote/pregenerate
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const tomorrowStr = formatAppDate(addDays(new Date(), 1));
+        const tomorrowStr = formatAppDate(new Date(), 1);
 
         const existing = await prisma.dailyView.findUnique({
             where: { userId_date: { userId, date: tomorrowStr } },
